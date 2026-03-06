@@ -1,0 +1,41 @@
+{
+  "extends": [
+    "@tsconfig/strictest/tsconfig.json",
+    "@tsconfig/node24/tsconfig.json"
+  ],
+
+  "include": ["src/**/*"],
+
+  "compilerOptions": {
+    // File layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Other outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // JSX options
+    // "jsx": "react",
+    // "jsxFactory": "h",
+    // "jsxFragmentFactory": "Fragment",
+    // "jsx": "react-jsx",
+    // "jsxImportSource": "jsx-xml-generator",
+    // "paths": {
+    //   "jsx-xml-generator": ["src/jsx-xml-generator"],
+    //   "jsx-xml-generator/*": ["src/jsx-xml-generator/*"]
+    // },
+    // "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "xastscript",
+
+    // Other options
+    // "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+  }
+}
