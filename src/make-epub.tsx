@@ -1,22 +1,25 @@
-import path from "node:path";
-
-import * as fflate from "fflate";
+import * as zip from "@zip.js/zip.js";
 import * as mime from "mime-types";
+import path from "node:path";
 import { toXml } from "xast-util-to-xml";
 import type { Result } from "xastscript";
 
 import type { EpubParameters } from "./epub-parameters.js";
+
 import containerXml from "./epub-static/container.xml" with { type: "bytes" };
 import styleCss from "./epub-static/style.css" with { type: "bytes" };
 
 
-const ZIP_OPTIONS = { level: 9 } as const;
+const ZIP_OPTIONS = {
+  level: 9,
+  extendedTimestamp: false,
+} as const satisfies zip.ZipWriterAddDataOptions;
 
 
 export interface ImageSource {
   filename: string;
 
-  readImage(): AsyncIterable<Uint8Array> | Promise<Uint8Array>;
+  readImage(): Promise<ReadableStream<Uint8Array> | Uint8Array>;
   getTimestamp?(): Promise<Date | null | undefined>;
   readCaption?(): Promise<string | null | undefined>;
 }
@@ -66,11 +69,10 @@ const XML_DECLARATION = {
 } as const;
 
 
+const makeXml = (tree: Result) => toXml([XML_DECLARATION, tree]);
+
 const imageFilenameToXhtmlFilename = (imgName: string) =>
   `${path.parse(imgName).name}.xhtml`;
-
-const makeXml = (tree: Result) =>
-  fflate.strToU8(toXml([XML_DECLARATION, tree]));
 
 
 const makeContentOpf = (
@@ -211,54 +213,50 @@ const makePageXhtml = (
 export async function makeEpub(
   imageSources: ImageSource[],
   epubParameters: EpubParameters,
-  ondata: NonNullable<ConstructorParameters<typeof fflate.Zip>[0]>,
+  outputStream: WritableStream,
 ) {
   const imageInfos = imageSources.map((imgSrc) =>
     new ImageInfo(imgSrc.filename));
 
-  const epub = new fflate.Zip();
+  const zipWriter = new zip.ZipWriter(outputStream);
 
-  const finished = new Promise<void>((resolve) => {
-    epub.ondata = (err, data, final) => {
-      if (err)
-        console.error("Zip generator error:", err);
-
-      ondata(err, data, final);
-
-      if (final)
-        resolve();
-    };
-  });
-
-  function addFile(filename: string, data: Uint8Array) {
-    const f = new fflate.ZipDeflate(filename, ZIP_OPTIONS);
-    epub.add(f);
-    f.push(data, true);
-  }
+  const addFile = (filename: string, data: string | Uint8Array) =>
+    zipWriter.add(
+      filename,
+      typeof data === "string"
+        ? new zip.TextReader(data)
+        : new zip.Uint8ArrayReader(data),
+      ZIP_OPTIONS,
+    );
 
   // Write mimetype file. It must be stored uncompressed as the first
-  // file in the archive.
-  const mimetypeFile = new fflate.ZipPassThrough("mimetype");
-  epub.add(mimetypeFile);
-  mimetypeFile.push(fflate.strToU8("application/epub+zip"), true);
+  // file in the archive with no extra header fields.
+  await zipWriter.add(
+    "mimetype",
+    new zip.TextReader("application/epub+zip"),
+    {
+      compressionMethod: 0,
+      extendedTimestamp: false,
+    },
+  );
 
-  addFile("META-INF/container.xml", containerXml);
-  addFile(
+  await addFile("META-INF/container.xml", containerXml);
+  await addFile(
     "OEBPS/content.opf",
     makeContentOpf(imageInfos, epubParameters),
   );
-  addFile(
+  await addFile(
     "OEBPS/nav.xhtml",
     makeNavigationDocument(imageInfos, epubParameters),
   );
-  addFile("OEBPS/style.css", styleCss);
+  await addFile("OEBPS/style.css", styleCss);
 
   for (let i=0; i < imageSources.length; i++) {
     const imageSource = imageSources[i] as ImageSource;
     const imageInfo = imageInfos[i] as ImageInfo;
 
     // add page xhtml
-    addFile(
+    await addFile(
       `OEBPS/${imageFilenameToXhtmlFilename(imageInfo.destFilename)}`,
       makePageXhtml(
         imageInfo,
@@ -268,25 +266,20 @@ export async function makeEpub(
     );
 
     // add image
-    const imgFile = new fflate.AsyncZipDeflate(
-      `OEBPS/${imageInfo.destFilename}`,
-      ZIP_OPTIONS);
+    let options: zip.ZipWriterAddDataOptions = ZIP_OPTIONS;
     const timestamp = await imageSource.getTimestamp?.();
-    if (timestamp != null)
-      imgFile.mtime = timestamp;
-    epub.add(imgFile);
-    const imgReader = imageSource.readImage();
-    if (Symbol.asyncIterator in imgReader) {
-      for await (const chunk of imgReader)
-        imgFile.push(chunk);
-      imgFile.push(new Uint8Array(), true);
+    if (timestamp != null) {
+      options = { ...options, lastModDate: timestamp };
     }
-    else {
-      imgFile.push(await imgReader, true);
-    }
+    const imgReader = await imageSource.readImage();
+    await zipWriter.add(
+      `OEBPS/${imageInfo.destFilename}`,
+      "getReader" in imgReader
+        ? imgReader
+        : new zip.Uint8ArrayReader(imgReader),
+      options,
+    );
   }
 
-  epub.end();
-
-  await finished;
+  await zipWriter.close();
 }
