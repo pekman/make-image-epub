@@ -11,6 +11,7 @@ const options: esbuild.BuildOptions = {
   entryPoints: ["src/index.ts"],
   bundle: true,
   outdir: "dist",
+  sourcemap: true,
   platform: "node",
   target: `node${nodeVersion}`,
   packages: "external",
