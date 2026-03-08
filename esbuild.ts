@@ -25,5 +25,6 @@ if (process.argv[2] === "--watch") {
   console.log("Watching for changes…");
 }
 else {
-  await esbuild.build(options);
+  const result = await esbuild.build({...options, metafile: true });
+  console.log(await esbuild.analyzeMetafile(result.metafile));
 }
