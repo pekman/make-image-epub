@@ -33,6 +33,7 @@
   "dependencies": {
     "@zip.js/zip.js": "^2.8.23",
     "mime-types": "^3.0.2",
+    "pathe": "^2.0.3",
     "xast-util-to-xml": "^4.0.0",
     "xastscript": "^4.0.0"
   }

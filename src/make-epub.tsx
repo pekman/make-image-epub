@@ -21,7 +21,7 @@ export interface ImageSource {
 
   readImage(): Promise<ReadableStream<Uint8Array> | Uint8Array>;
   getTimestamp?(): Promise<Date | null | undefined>;
-  readCaption?(): Promise<string | null | undefined>;
+  readCaption?(): Promise<string | Result | null | undefined>;
 }
 
 
@@ -204,8 +204,9 @@ const makePageXhtml = (
     </head>
     <body>
       <img src={image.destFilename} />
-      {caption != null &&
-        <div id="caption">{caption}</div>
+      {caption != null
+        ? <div id="caption">{caption}</div>
+        : null
       }
     </body>
   </html>
