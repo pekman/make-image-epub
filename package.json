@@ -11,7 +11,7 @@
     "dev": "tsx ./esbuild.ts --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest"
   },
   "engines": {
     "node": ">=24.14.0"
@@ -28,7 +28,8 @@
     "eslint": "^10.0.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.8.23",
