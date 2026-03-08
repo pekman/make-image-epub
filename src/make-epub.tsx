@@ -68,8 +68,10 @@ const XML_DECLARATION = {
   value: 'version="1.0" encoding="UTF-8"',
 } as const;
 
+const makeXml = (tree: Result) => toXml(
+  [XML_DECLARATION, tree],
+  { closeEmptyElements: true });
 
-const makeXml = (tree: Result) => toXml([XML_DECLARATION, tree]);
 
 const imageFilenameToXhtmlFilename = (imgName: string) =>
   `${path.parse(imgName).name}.xhtml`;
