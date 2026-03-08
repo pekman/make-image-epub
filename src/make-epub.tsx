@@ -179,7 +179,9 @@ const makeNavigationDocument = (
         <ol>
           {images.map(({ destFilename, displayedName }) =>
             <li>
-              <a href={destFilename}>{displayedName}</a>
+              <a href={imageFilenameToXhtmlFilename(destFilename)}>
+                {displayedName}
+              </a>
             </li>
           )}
         </ol>
