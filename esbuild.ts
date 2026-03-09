@@ -8,7 +8,7 @@ const nodeVersion = (/^\s*(?:\^|>?=|~)?(\d[\w.]+)\s*$/.exec(
 console.info("Building for Node.js version %o", nodeVersion);
 
 const options: esbuild.BuildOptions = {
-  entryPoints: ["src/index.ts"],
+  entryPoints: ["src/cli/index.ts"],
   bundle: true,
   outdir: "dist",
   sourcemap: true,

@@ -1,21 +1,12 @@
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
-import { argv, exit, stdout } from "node:process";
-import { Readable, Writable } from "node:stream";
+import { Readable } from "node:stream";
 import * as pathe from "pathe";
-
-import { CAPTION_EXTENSIONS, parseTextCaption } from "./captions.js";
-import { makeEpub, type ImageSource } from "./make-epub.js";
-
-
-const [, , title, epubFilename, ...imgFilenames] = argv;
-if (title == null || epubFilename == null) {
-  console.error(`usage ${argv[1]} title EPUB_filename image...`);
-  exit(1);
-}
+import { CAPTION_EXTENSIONS, parseTextCaption } from "../captions.js";
+import type { ImageSource } from "../make-epub.js";
 
 
-class ImageReader implements ImageSource {
+export class ImageReader implements ImageSource {
   constructor(public readonly filename: string) {}
 
   async readImage(): Promise<ReadableStream<Uint8Array>> {
@@ -74,16 +65,3 @@ class ImageReader implements ImageSource {
     }
   }
 }
-
-await makeEpub(
-  imgFilenames.map((filename) => new ImageReader(filename)),
-  {
-    title,
-    language: "en",
-  },
-  Writable.toWeb(
-    epubFilename === "-"
-      ? stdout
-      : createWriteStream(epubFilename, { flags: "wx" })
-  ),
-);
