@@ -6,8 +6,8 @@ import type { Result } from "xastscript";
 
 import type { EpubParameters } from "./epub-parameters.js";
 
-import containerXml from "./epub-static/container.xml" with { type: "bytes" };
-import styleCss from "./epub-static/style.css" with { type: "bytes" };
+import containerXml from "./epub-static/container.xml?raw";
+import styleCss from "./epub-static/style.css?raw";
 
 
 const ZIP_OPTIONS = {
@@ -225,12 +225,10 @@ export async function makeEpub(
 
   const zipWriter = new zip.ZipWriter(outputStream);
 
-  const addFile = (filename: string, data: string | Uint8Array) =>
+  const addFile = (filename: string, data: string) =>
     zipWriter.add(
       filename,
-      typeof data === "string"
-        ? new zip.TextReader(data)
-        : new zip.Uint8ArrayReader(data),
+      new zip.TextReader(data),
       ZIP_OPTIONS,
     );
 

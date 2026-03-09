@@ -1,4 +1,4 @@
-declare module "./epub-static/*" {
-  const data: Uint8Array;
-  export default data;
+declare module "*?raw" {
+  const content: string;
+  export default content;
 }
