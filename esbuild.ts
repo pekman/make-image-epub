@@ -1,6 +1,6 @@
 import * as esbuild from "esbuild";
 import process from "node:process";
-import packageJson from "./package.json";
+import packageJson from "./package.json" with { type: "json" };
 
 const nodeVersion = (/^\s*(?:\^|>?=|~)?(\d[\w.]+)\s*$/.exec(
   packageJson.engines.node,

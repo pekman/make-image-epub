@@ -1,5 +1,5 @@
 import { assert, expect, test } from "vitest";
-import { parseTextCaption } from "../src/captions";
+import { parseTextCaption } from "../src/captions.js";
 
 
 const MULTI_PARAGRAPH_CAPTION = `\
