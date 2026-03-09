@@ -24,6 +24,7 @@
     "@tsconfig/strictest": "^2.0.8",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^25.3.5",
+    "epubchecker": "^5.2.1",
     "esbuild": "^0.27.3",
     "eslint": "^10.0.2",
     "tsx": "^4.21.0",
