@@ -5,6 +5,7 @@ import { toXml } from "xast-util-to-xml";
 import type { Result } from "xastscript";
 
 import type { EpubParameters } from "./epub-parameters.js";
+import { FilenameMangler, removeCommonPathPrefix } from "./filenames.js";
 
 import containerXml from "./epub-static/container.xml?raw";
 import styleCss from "./epub-static/style.css?raw";
@@ -26,35 +27,26 @@ export interface ImageSource {
 
 
 class ImageInfo {
-  /** source filename */
-  readonly srcPath: string;
-
-  /** filename in zip file without directory */
-  readonly destFilename: string;
-
   /** image name shown to user */
   readonly displayedName: string;
 
   readonly mimetype: string;
 
-  constructor(srcPath: string) {
-    this.srcPath = pathe.normalize(srcPath);
+  constructor(
+    /** image path in zip file relative to OEBPS/ directory */
+    readonly destPath: string,
+  ) {
+    this.displayedName = pathe.parse(destPath).name;
 
-    const parts = pathe.parse(this.srcPath);
-    this.destFilename = parts.base;
-    // TODO: handle unallowed characters in destFilename
-    // TODO: handle destFilename collisions
-    this.displayedName = parts.name;
-
-    let mimetype = mime.lookup(srcPath);
+    let mimetype = mime.lookup(destPath);
     if (!mimetype) {
-      console.warn("Warning: Cannot determine file type for %o", srcPath);
+      console.warn("Warning: Cannot determine file type for %o", destPath);
       mimetype = "application/octet-stream";
     }
     else if (!mimetype.startsWith("image/")) {
       console.warn(
         "Warning: %o is not an image. It is %o.",
-        srcPath, mimetype);
+        destPath, mimetype);
     }
     this.mimetype = mimetype;
   }
@@ -78,7 +70,7 @@ const imageFilenameToXhtmlFilename = (imgName: string) =>
 
 
 const makeContentOpf = (
-  images: ImageInfo[],
+  images: readonly ImageInfo[],
   epubParameters: EpubParameters,
 ) => {
   // Globally unique document ID. Must be valid XML identifier, which
@@ -136,16 +128,16 @@ const makeContentOpf = (
         />
 
         <>{
-          images.entries().flatMap(([i, { destFilename, mimetype }]) => [
+          images.entries().flatMap(([i, { destPath, mimetype }]) => [
             <item
               id={`page-${i + 1}`}
-              href={imageFilenameToXhtmlFilename(destFilename)}
+              href={imageFilenameToXhtmlFilename(destPath)}
               media-type="application/xhtml+xml"
             />
             ,
             <item
               id={`image-${i + 1}`}
-              href={destFilename}
+              href={destPath}
               media-type={mimetype}
             />
           ]).toArray()
@@ -163,7 +155,7 @@ const makeContentOpf = (
 
 
 const makeNavigationDocument = (
-  images: ImageInfo[],
+  images: readonly ImageInfo[],
   epubParameters: EpubParameters,
 ) => makeXml(
   <html
@@ -177,9 +169,9 @@ const makeNavigationDocument = (
     <body>
       <nav epub:type="toc">
         <ol>
-          {images.map(({ destFilename, displayedName }) =>
+          {images.map(({ destPath, displayedName }) =>
             <li>
-              <a href={imageFilenameToXhtmlFilename(destFilename)}>
+              <a href={imageFilenameToXhtmlFilename(destPath)}>
                 {displayedName}
               </a>
             </li>
@@ -205,7 +197,7 @@ const makePageXhtml = (
       <link rel="stylesheet" href="style.css" />
     </head>
     <body>
-      <img src={image.destFilename} />
+      <img src={image.destPath} />
       {caption != null
         ? <div id="caption">{caption}</div>
         : null
@@ -216,12 +208,18 @@ const makePageXhtml = (
 
 
 export async function makeEpub(
-  imageSources: ImageSource[],
+  imageSources: readonly ImageSource[],
   epubParameters: EpubParameters,
   outputStream: WritableStream,
 ) {
-  const imageInfos = imageSources.map((imgSrc) =>
-    new ImageInfo(imgSrc.filename));
+  // Remove common directory prefix from filenames, convert them to
+  // EPUB-compatible form, and wrap them in ImageInfo
+  const filenameMangler = new FilenameMangler();
+  const imageInfos = removeCommonPathPrefix(
+    imageSources.map((imgSrc) => imgSrc.filename),
+  ).map(
+    (filename) => new ImageInfo(filenameMangler.mangle(filename))
+  );
 
   const zipWriter = new zip.ZipWriter(outputStream);
 
@@ -255,12 +253,12 @@ export async function makeEpub(
   await addFile("OEBPS/style.css", styleCss);
 
   for (let i=0; i < imageSources.length; i++) {
-    const imageSource = imageSources[i] as ImageSource;
-    const imageInfo = imageInfos[i] as ImageInfo;
+    const imageSource = imageSources[i]!;
+    const imageInfo = imageInfos[i]!;
 
     // add page xhtml
     await addFile(
-      `OEBPS/${imageFilenameToXhtmlFilename(imageInfo.destFilename)}`,
+      `OEBPS/${imageFilenameToXhtmlFilename(imageInfo.destPath)}`,
       makePageXhtml(
         imageInfo,
         await imageSource.readCaption?.(),
@@ -276,7 +274,7 @@ export async function makeEpub(
     }
     const imgReader = await imageSource.readImage();
     await zipWriter.add(
-      `OEBPS/${imageInfo.destFilename}`,
+      `OEBPS/${imageInfo.destPath}`,
       "getReader" in imgReader
         ? imgReader
         : new zip.Uint8ArrayReader(imgReader),
