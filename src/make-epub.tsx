@@ -1,6 +1,6 @@
 import * as zip from "@zip.js/zip.js";
 import * as mime from "mime-types";
-import path from "node:path";
+import * as pathe from "pathe";
 import { toXml } from "xast-util-to-xml";
 import type { Result } from "xastscript";
 
@@ -38,9 +38,9 @@ class ImageInfo {
   readonly mimetype: string;
 
   constructor(srcPath: string) {
-    this.srcPath = path.normalize(srcPath);
+    this.srcPath = pathe.normalize(srcPath);
 
-    const parts = path.parse(this.srcPath);
+    const parts = pathe.parse(this.srcPath);
     this.destFilename = parts.base;
     // TODO: handle unallowed characters in destFilename
     // TODO: handle destFilename collisions
@@ -74,7 +74,7 @@ const makeXml = (tree: Result) => toXml(
 
 
 const imageFilenameToXhtmlFilename = (imgName: string) =>
-  `${path.parse(imgName).name}.xhtml`;
+  `${pathe.parse(imgName).name}.xhtml`;
 
 
 const makeContentOpf = (
