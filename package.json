@@ -24,6 +24,7 @@
     "@tsconfig/strictest": "^2.0.8",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^25.3.5",
+    "@types/yargs": "^17.0.35",
     "epubchecker": "^5.2.1",
     "esbuild": "^0.27.3",
     "eslint": "^10.0.2",
@@ -38,6 +39,7 @@
     "pathe": "^2.0.3",
     "unicode-case-folding": "^1.1.1",
     "xast-util-to-xml": "^4.0.0",
-    "xastscript": "^4.0.0"
+    "xastscript": "^4.0.0",
+    "yargs": "^18.0.0"
   }
 }
