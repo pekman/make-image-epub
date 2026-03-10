@@ -2,9 +2,9 @@ import * as zip from "@zip.js/zip.js";
 import * as mime from "mime-types";
 import * as pathe from "pathe";
 import { toXml } from "xast-util-to-xml";
-import type { Result } from "xastscript";
+import { x, type Result } from "xastscript";
 
-import type { EpubParameters } from "./epub-parameters.js";
+import { iterDublinCoreMetadata, type EpubParameters } from "./epub-parameters.js";
 import { FilenameMangler, removeCommonPathPrefix } from "./filenames.js";
 
 import containerXml from "./epub-static/container.xml?raw";
@@ -111,7 +111,12 @@ const makeContentOpf = (
             content. */}
         <meta property="dcterms:modified">{now}</meta>
 
-        {/* TODO: other metadata here, especially dc:creator */}
+        <>
+          {iterDublinCoreMetadata(epubParameters).map(([key, value]) =>
+            x(`dc:${key}`, null, value)
+            // TODO: support role identifiers
+          ).toArray()}
+        </>
       </metadata>
 
       <manifest>
