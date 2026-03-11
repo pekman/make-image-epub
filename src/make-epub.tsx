@@ -4,7 +4,11 @@ import * as pathe from "pathe";
 import { toXml } from "xast-util-to-xml";
 import { x, type Result } from "xastscript";
 
-import { iterDublinCoreMetadata, type EpubParameters } from "./epub-parameters.js";
+import {
+  iterDublinCoreMetadata,
+  splitRoleAndValue,
+  type EpubParameters,
+} from "./epub-parameters.js";
 import { FilenameMangler, removeCommonPathPrefix } from "./filenames.js";
 
 import containerXml from "./epub-static/container.xml?raw";
@@ -81,6 +85,33 @@ const makeContentOpf = (
   const now = new Date().toISOString()
     .replace(/\.\d+/, "");  // remove fractional part of seconds
 
+  let idCounter = 1;
+
+  function makeDublinCoreMetadataItem(
+    key: Parameters<typeof splitRoleAndValue>[0],
+    value: string,
+  ) {
+    const tag = `dc:${key}`;
+    const [role, actualValue] = splitRoleAndValue(key, value);
+    if (role != null) {
+      const id = `id${idCounter}`;
+      idCounter++;
+      return x(null,  // fragment
+        x(tag, { id }, actualValue),
+        <meta
+          refines={`#${id}`}
+          property="role"
+          scheme="marc:relators"
+        >
+          {role}
+        </meta>,
+      );
+    }
+    else {
+      return x(tag, actualValue);
+    }
+  }
+
   // Note: This file and all files referred to are in the same
   // directory in the zip archive. No paths needed in URLs.
   return makeXml(
@@ -111,12 +142,11 @@ const makeContentOpf = (
             content. */}
         <meta property="dcterms:modified">{now}</meta>
 
-        <>
-          {iterDublinCoreMetadata(epubParameters).map(([key, value]) =>
-            x(`dc:${key}`, null, value)
-            // TODO: support role identifiers
-          ).toArray()}
-        </>
+        <>{
+          iterDublinCoreMetadata(epubParameters).map(([key, value]) =>
+            makeDublinCoreMetadataItem(key, value)
+          ).toArray()
+        }</>
       </metadata>
 
       <manifest>

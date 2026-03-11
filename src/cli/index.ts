@@ -65,7 +65,13 @@ const args = yargs(argv.slice(2))
 
       const group = "Dublin Core metadata options:" +
         "\n\n  " +
-        "Optional Dublin Core metadata fields. " +
+        "Optional Dublin Core metadata fields." +
+        "\n\n  " +
+        "Some fields can be prefixed with 3-letter role identifier " +
+        "and a colon, e.g. 'art:Name' for artist. For identifier " +
+        "descriptions, see " +
+        "<https://id.loc.gov/vocabulary/relators.html>" +
+        "\n\n  " +
         "For field descriptions, see " +
         "<https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#section-3>" +
         "\n";
@@ -75,16 +81,14 @@ const args = yargs(argv.slice(2))
           group,
           type: "string",
           requiresArg: true,
-          alias: (
-            name === "creator" ? "c" :
-            name === "date" ? "d" :
-            undefined
-          ),
+          alias: {
+            creator: "c",
+            date: "d",
+          }[name],
           describe: [
             info?.help,
             info?.noMultiple ? null : "Can be given multiple times.",
-            // TODO: uncomment when role identifiers implemented
-            // info?.supportsRole && "Supports role identifier.",
+            info?.supportsRole && "Supports role identifier.",
           ].filter((item) => item).join(" "),
           coerce: (val: string | string[]) =>
             (info?.noMultiple

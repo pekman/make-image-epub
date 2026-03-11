@@ -34,24 +34,47 @@ export const DUBLIN_CORE_METADATA_KEYS = {
   type: null,
 } as const satisfies Record<string, DCKeyInfo | null>;
 
-export type DublinCoreMetadata = Partial<Record<
-  keyof typeof DUBLIN_CORE_METADATA_KEYS,
-  string[]
->>;
+type DCMetadataKey = keyof typeof DUBLIN_CORE_METADATA_KEYS;
+export type DublinCoreMetadata = Partial<Record<DCMetadataKey, string[]>>;
 
 export const getDublinCoreKeyInfo = (): [string, DCKeyInfo | null][] =>
   Object.entries(DUBLIN_CORE_METADATA_KEYS);
 
 export function* iterDublinCoreMetadata(
   metadata: DublinCoreMetadata,
-): Generator<[string, string]> {
+): Generator<[DCMetadataKey, string]> {
   for (const [key, values] of Object.entries(metadata)) {
     if (values != null && key in DUBLIN_CORE_METADATA_KEYS) {
       for (const value of values) {
-        yield [key, value];
+        yield [key as DCMetadataKey, value];
       }
     }
   }
+}
+
+function dcKeySupportsRole(key: DCMetadataKey) {
+  const info: DCKeyInfo | null = DUBLIN_CORE_METADATA_KEYS[key];
+  return !!info?.supportsRole;
+}
+
+/** Split possible role identifier from Dublin Core metadata value.
+ *
+ * @returns tuple [ <role or undefined if no role>, <actual value> ]
+ */
+export function splitRoleAndValue(
+  key: DCMetadataKey,
+  value: string,
+): [string | undefined, string] {
+  let role: string | undefined = undefined;
+  if (dcKeySupportsRole(key)) {
+    // Try to split value to role and actual value. If no role given,
+    // role=undefined and value remains the same.
+    const m = /^(?:([a-z]{3}|oth\.[a-z_-]+):)?(.*?)$/.exec(value);
+    // regexp always matches
+    role = m![1];  // may be part of the match
+    value = m![2]!;  // always part of the match
+  }
+  return [role, value];
 }
 
 export interface EpubParameters extends DublinCoreMetadata {
