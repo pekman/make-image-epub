@@ -72,7 +72,7 @@ const args = yargs(argv.slice(2))
         "Optional Dublin Core metadata fields." +
         "\n\n  " +
         "Some fields can be prefixed with 3-letter role identifier " +
-        "and a colon, e.g. 'art:Name' for artist. For identifier " +
+        'and a colon, e.g. "art:Name" for artist. For identifier ' +
         "descriptions, see " +
         "<https://id.loc.gov/vocabulary/relators.html>" +
         "\n\n  " +

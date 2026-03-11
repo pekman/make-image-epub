@@ -30,8 +30,8 @@ export const DUBLIN_CORE_METADATA_KEYS = {
       "year, month, day, time with or without seconds or time zone. " +
       "Format: yyyy[-mm[-dd[Thh:mm[:ss[.fraction]][Z|±hh:mm]]]] " +
       "(see <https://www.w3.org/TR/NOTE-datetime>). Space is also " +
-      "allowed in place of 'T'. Examples: '2026', '2026-01', " +
-      "'2026-01-01 12:34Z'",
+      'allowed in place of "T". Examples: "2026", "2026-01", ' +
+      '"2026-01-01 12:34Z"',
   },
 
   // then in alphabetical order
