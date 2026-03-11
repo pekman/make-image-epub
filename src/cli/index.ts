@@ -9,19 +9,20 @@ import {
 } from "../epub-parameters.js";
 import { makeEpub } from "../make-epub.js";
 import { ImageReader } from "./image-reader.js";
+import { findImages } from "./find-images.js";
 
 
 interface CliArgs extends DublinCoreMetadata {
   title: string;
   epubFilename: string;
-  images: string[];
+  imagesOrDirectories: string[];
   language: string;
 }
 
 const args = yargs(argv.slice(2))
   .alias("help", "h")
   .command(
-    "$0 [options] <title> <epub-filename> <images...>",
+    "$0 [options] <title> <epub-filename> <images-or-directories...>",
     "Create EPUB document from image files and text captions.",
     (yargs) => {
       // Coercion function factory for options that don't support
@@ -47,10 +48,13 @@ const args = yargs(argv.slice(2))
           type: "string",
           describe: 'output EPUB file ("-" = pipe to stdout)',
         })
-        .positional("images", {
+        .positional("images-or-directories", {
           type: "string",
           array: true,
-          describe: "source images",
+          describe: "source images or directories. " +
+            "Directories are searched recursively. Images within a " +
+            "directory are sorted in natural order (numbers in " +
+            "filenames are compared numerically).",
         })
         .option("language", {
           group: "Document options:",
@@ -102,7 +106,10 @@ const args = yargs(argv.slice(2))
   .strict()
   .parseSync() as Arguments<CliArgs>;
 
-const { epubFilename, images } = args;
+const { epubFilename, imagesOrDirectories } = args;
+
+const images = await Array.fromAsync(findImages(imagesOrDirectories));
+
 await makeEpub(
   images.map((filename) => new ImageReader(filename)),
   args,
