@@ -10,11 +10,24 @@ export const DUBLIN_CORE_METADATA_KEYS = {
   creator: { supportsRole: true },
   date: {
     noMultiple: true,
-    // TODO: validate
-    converter: (val: string) => val.trim().toUpperCase().replace(" ", "T"),
+
+    converter(datestr: string) {
+      const converted = datestr
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/, "T")
+        .replace(/\s+([Z+-])/, "$1");
+      const re =
+        /^\d+(-\d\d(-\d\d(T\d\d:\d\d(:\d\d(\.\d+)?)?(Z|[+-]\d\d:\d\d)?)?)?)?$/;
+      if (!re.test(converted)) {
+        throw new Error("Invalid date");
+      }
+      return converted;
+    },
+
     help:
-      "publication time. Different granularities allowed: year, " +
-      "month, day, time with or without seconds or time zone. " +
+      "publication date. Different levels of precision allowed: " +
+      "year, month, day, time with or without seconds or time zone. " +
       "Format: yyyy[-mm[-dd[Thh:mm[:ss[.fraction]][Z|±hh:mm]]]] " +
       "(see <https://www.w3.org/TR/NOTE-datetime>). Space is also " +
       "allowed in place of 'T'. Examples: '2026', '2026-01', " +
