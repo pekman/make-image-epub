@@ -16,4 +16,11 @@ export default defineConfig(
       "indent": ["warn", 2],
     },
   },
+  {
+    // Empty {} in args is a Vitest pattern in fixtures
+    files: ["test/**/*.ts"],
+    rules: {
+      "no-empty-pattern": "off",
+    }
+  },
 );

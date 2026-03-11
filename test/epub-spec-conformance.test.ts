@@ -1,20 +1,16 @@
 import epubchecker from "epubchecker";
 import { createWriteStream } from "node:fs";
-import { glob, mkdtempDisposable } from "node:fs/promises";
-import os from "node:os";
+import { glob } from "node:fs/promises";
 import path from "node:path";
 import { Writable } from "node:stream";
-import { test } from "vitest";
 
 import { ImageReader } from "../src/cli/image-reader.js";
 import { makeEpub } from "../src/make-epub.js";
+import { test } from "./tmpdir.js";
 
 
-test("EPUB spec conformance", async () => {
-  await using tmpdir = await mkdtempDisposable(
-    path.join(os.tmpdir(), "make-image-epub-test-"),
-  );
-  const testEpubPath = path.join(tmpdir.path, "test.epub");
+test("EPUB spec conformance", async ({ tmpdir }) => {
+  const testEpubPath = path.join(tmpdir, "test.epub");
 
   const imageReaders = await Array.fromAsync(
     glob(path.join(import.meta.dirname, "data", "*.png")),
