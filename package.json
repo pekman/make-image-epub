@@ -11,7 +11,8 @@
     "dev": "tsx ./esbuild.ts --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest"
+    "test": "vitest",
+    "check": "pnpm run typecheck && pnpm run lint && vitest run"
   },
   "engines": {
     "node": ">=24.14.0"
