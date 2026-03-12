@@ -8,32 +8,36 @@ function isImage(filename: string): boolean {
   return !!mimetype && mimetype.startsWith("image/");
 }
 
-/** Natural sort collator for current locale */
-const collator = new Intl.Collator(undefined, { numeric: true });
+export async function* findImages(
+  paths: string[],
+  locale?: string,
+): AsyncGenerator<string> {
 
-async function* findRecursively(path: string): AsyncGenerator<string> {
-  const dirEntries = await readdir(path, { withFileTypes: true });
-  dirEntries.sort((a, b) => collator.compare(a.name, b.name));
+  // Natural sort collator. locale = undefined means use system locale.
+  const collator = new Intl.Collator(locale, { numeric: true });
 
-  for (const dirEntry of dirEntries) {
-    const dirEntryPath = join(dirEntry.parentPath, dirEntry.name);
+  async function* findRecursively(path: string): AsyncGenerator<string> {
+    const dirEntries = await readdir(path, { withFileTypes: true });
+    dirEntries.sort((a, b) => collator.compare(a.name, b.name));
 
-    // dirEntry.isFile() et al don't follow symlinks. We need to
-    // follow them ourselves.
-    const dirEntryInfo = dirEntry.isSymbolicLink()
-      ? await stat(dirEntryPath)
-      : dirEntry;
+    for (const dirEntry of dirEntries) {
+      const dirEntryPath = join(dirEntry.parentPath, dirEntry.name);
 
-    if (dirEntryInfo.isDirectory()) {
-      yield* findRecursively(dirEntryPath);
-    }
-    else if (dirEntryInfo.isFile() && isImage(dirEntry.name)) {
-      yield dirEntryPath;
+      // dirEntry.isFile() et al don't follow symlinks. We need to
+      // follow them ourselves.
+      const dirEntryInfo = dirEntry.isSymbolicLink()
+        ? await stat(dirEntryPath)
+        : dirEntry;
+
+      if (dirEntryInfo.isDirectory()) {
+        yield* findRecursively(dirEntryPath);
+      }
+      else if (dirEntryInfo.isFile() && isImage(dirEntry.name)) {
+        yield dirEntryPath;
+      }
     }
   }
-}
 
-export async function* findImages(paths: string[]): AsyncGenerator<string> {
   for (const path of paths) {
     const s = await stat(path);
     if (s.isDirectory()) {
