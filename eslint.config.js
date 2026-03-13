@@ -13,7 +13,10 @@ export default defineConfig(
     plugins: { "@stylistic": stylistic },
     rules: {
       "no-trailing-spaces": "error",
-      "indent": ["warn", 2],
+      "indent": ["warn", 2, {
+        // case statement indented inside switch
+        "SwitchCase": 1,
+      }],
     },
   },
   {
@@ -21,6 +24,6 @@ export default defineConfig(
     files: ["test/**/*.ts"],
     rules: {
       "no-empty-pattern": "off",
-    }
+    },
   },
 );

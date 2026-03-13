@@ -5,11 +5,12 @@ import yargs, { type Arguments } from "yargs";
 
 import {
   getDublinCoreKeyInfo,
+  TxtCaptionFormatting,
   type DublinCoreMetadata,
 } from "../epub-parameters.js";
 import { makeEpub } from "../make-epub.js";
-import { ImageReader } from "./image-reader.js";
 import { findImages } from "./find-images.js";
+import { ImageReader } from "./image-reader.js";
 
 
 interface CliArgs extends DublinCoreMetadata {
@@ -101,6 +102,16 @@ const args = yargs(argv.slice(2))
             ).map(info?.converter ?? ((val) => val)),
         })
       }
+
+      yargs.option("txt-formatting", {
+        type: "string",
+        choices: Object.keys(TxtCaptionFormatting),
+        requiresArg: true,
+        describe: "formatting for captions from .txt files.\nValues:\n\n" +
+          Object.entries(TxtCaptionFormatting).map(([key, val]) =>
+            `${key}:\n${val}\n\n`
+          ).join(""),
+      });
     },
   )
   .strict()
@@ -111,7 +122,7 @@ const { epubFilename, imagesOrDirectories } = args;
 const images = await Array.fromAsync(findImages(imagesOrDirectories));
 
 await makeEpub(
-  images.map((filename) => new ImageReader(filename)),
+  images.map((filename) => new ImageReader(filename, args)),
   args,
   Writable.toWeb(
     epubFilename === "-"

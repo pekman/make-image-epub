@@ -13,21 +13,25 @@ const TextReaderMock = zip.TextReader as unknown as MockedClass<
 async function makeEpubWithCaption(
   ext: typeof EXTENSIONS[number],
   caption: string,
-  epubParameters?: Partial<EpubParameters>,
+  epubExtraParameters?: Partial<EpubParameters>,
 ) {
   TextReaderMock.mockClear();
 
+  const epubParameters = {
+    title: "test title",
+    language: "en",
+    ...epubExtraParameters,
+  };
   await makeEpub(
     [{
       filename: "test.png",
       readImage: async () => new Uint8Array(),
-      readCaption: async () => captionParserByExtension[ext](caption),
+      readCaption: async () => captionParserByExtension[ext](
+        caption,
+        epubParameters,
+      ),
     }],
-    {
-      title: "test title",
-      language: "en",
-      ...epubParameters,
-    },
+    epubParameters,
     new WritableStream(),  // no-op writable sink
   );
 

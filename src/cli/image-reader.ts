@@ -2,12 +2,17 @@ import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import * as pathe from "pathe";
+
 import { captionParserByExtension } from "../captions.js";
+import type { EpubParameters } from "../epub-parameters.js";
 import type { ImageSource } from "../make-epub.js";
 
 
 export class ImageReader implements ImageSource {
-  constructor(public readonly filename: string) {}
+  constructor(
+    public readonly filename: string,
+    public readonly epubParameters: EpubParameters,
+  ) {}
 
   async readImage(): Promise<ReadableStream<Uint8Array>> {
     return Readable.toWeb(createReadStream(this.filename));
@@ -54,7 +59,7 @@ export class ImageReader implements ImageSource {
         for (const basename of basenameCandidates) {
           const text = await tryRead(`${basename}.${extVariant}`);
           if (text != null) {
-            return parser(text);
+            return parser(text, this.epubParameters);
           }
         }
       }

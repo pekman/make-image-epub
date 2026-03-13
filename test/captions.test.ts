@@ -28,7 +28,10 @@ const EXTENSIONS = [
 
 test.each(EXTENSIONS)("paragraph splitting with %s", (ext) => {
 
-  const paragraphs = captionParserByExtension[ext](MULTI_PARAGRAPH_CAPTION);
+  const paragraphs = captionParserByExtension[ext](MULTI_PARAGRAPH_CAPTION, {
+    title: "test title",
+    language: "en",
+  });
   assert("children" in paragraphs);
 
   // Filter out "\n" text nodes that Markdown parser generates for

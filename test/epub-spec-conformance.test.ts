@@ -12,16 +12,17 @@ import { test } from "./tmpdir.js";
 test("EPUB spec conformance", async ({ tmpdir }) => {
   const testEpubPath = path.join(tmpdir, "test.epub");
 
+  const epubParameters = {
+    title: "test title",
+    language: "en",
+  };
   const imageReaders = await Array.fromAsync(
     glob(path.join(import.meta.dirname, "data", "*.png")),
-    (path) => new ImageReader(path),
+    (path) => new ImageReader(path, epubParameters),
   );
   await makeEpub(
     imageReaders,
-    {
-      title: "test title",
-      language: "en",
-    },
+    epubParameters,
     Writable.toWeb(createWriteStream(testEpubPath, { flags: "wx" })),
   );
 

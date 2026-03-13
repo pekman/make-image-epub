@@ -90,7 +90,24 @@ export function splitRoleAndValue(
   return [role, value];
 }
 
+export const TxtCaptionFormatting = {
+  flow:
+    "Split text into paragraphs. An empty line is considered a " +
+    "paragraph break. Other line breaks are not preserved; text " +
+    "flows naturally as paragraphs.",
+
+  verbatim:
+    "Put text as-is in a <pre> html element. Preserve spaces and " +
+    "line breaks. Text is displayed with a monospace font.",
+
+  markdown:
+    "Process as Markdown. This may be useful for some simple " +
+    "formattings, such as *italic*.",
+} as const;
+
 export interface EpubParameters extends DublinCoreMetadata {
   readonly title: string;
   readonly language: string;
+
+  txtFormatting?: keyof typeof TxtCaptionFormatting;
 }
