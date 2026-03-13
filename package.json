@@ -25,6 +25,7 @@
     "@tsconfig/strictest": "^2.0.8",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^25.3.5",
+    "@types/xast": "^2.0.4",
     "@types/yargs": "^17.0.35",
     "epubchecker": "^5.2.1",
     "esbuild": "^0.27.3",
@@ -36,6 +37,9 @@
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.8.23",
+    "hast-util-to-xast": "^3.0.1",
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-to-hast": "^13.2.1",
     "mime-types": "^3.0.2",
     "pathe": "^2.0.3",
     "unicode-case-folding": "^1.1.1",

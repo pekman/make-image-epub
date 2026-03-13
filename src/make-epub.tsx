@@ -2,7 +2,8 @@ import * as zip from "@zip.js/zip.js";
 import * as mime from "mime-types";
 import * as pathe from "pathe";
 import { toXml } from "xast-util-to-xml";
-import { x, type Result } from "xastscript";
+import { x } from "xastscript";
+import type { Nodes } from "xast";
 
 import {
   iterDublinCoreMetadata,
@@ -26,7 +27,7 @@ export interface ImageSource {
 
   readImage(): Promise<ReadableStream<Uint8Array> | Uint8Array>;
   getTimestamp?(): Promise<Date | null | undefined>;
-  readCaption?(): Promise<string | Result | null | undefined>;
+  readCaption?(): Promise<string | Nodes | null | undefined>;
 }
 
 
@@ -64,7 +65,7 @@ const XML_DECLARATION = {
   value: 'version="1.0" encoding="UTF-8"',
 } as const;
 
-const makeXml = (tree: Result) => toXml(
+const makeXml = (tree: Nodes) => toXml(
   [XML_DECLARATION, tree],
   { closeEmptyElements: true });
 
@@ -220,7 +221,7 @@ const makeNavigationDocument = (
 
 const makePageXhtml = (
   image: ImageInfo,
-  caption: string | Result | null | undefined,
+  caption: string | Nodes | null | undefined,
   epubParameters: EpubParameters,
 ) => makeXml(
   <html

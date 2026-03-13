@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import * as pathe from "pathe";
-import { CAPTION_EXTENSIONS, parseTextCaption } from "../captions.js";
+import { captionParserByExtension } from "../captions.js";
 import type { ImageSource } from "../make-epub.js";
 
 
@@ -42,12 +42,20 @@ export class ImageReader implements ImageSource {
       return text;
     }
 
-    // search for possible caption files
-    for (const ext of CAPTION_EXTENSIONS) {
-      for (const basename of basenameCandidates) {
-        const text = await tryRead(`${basename}.${ext}`);
-        if (text != null) {
-          return parseTextCaption(text);
+    // Search for possible caption files. Try different supported
+    // file extensions with lower, title, and upper case.
+    for (const [ext, parser] of Object.entries(captionParserByExtension)) {
+      const extCaseVariants = [
+        ext,
+        ext.slice(0, 1).toUpperCase() + ext.slice(1),
+        ext.toUpperCase(),
+      ];
+      for (const extVariant of extCaseVariants) {
+        for (const basename of basenameCandidates) {
+          const text = await tryRead(`${basename}.${extVariant}`);
+          if (text != null) {
+            return parser(text);
+          }
         }
       }
     }

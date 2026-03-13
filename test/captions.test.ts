@@ -1,5 +1,5 @@
 import { assert, expect, test } from "vitest";
-import { parseTextCaption } from "../src/captions.js";
+import { captionParserByExtension } from "../src/captions.js";
 
 
 const MULTI_PARAGRAPH_CAPTION = `\
@@ -20,10 +20,24 @@ below must be ignored; there is no empty paragraph at the end.
 `;
 
 
-test("paragraph splitting", () => {
-  const paragraphs = parseTextCaption(MULTI_PARAGRAPH_CAPTION);
+type Ext = keyof typeof captionParserByExtension;
 
-  for (const p of paragraphs.children) {
+test.each([
+  "txt",
+  "markdown",
+] satisfies Ext[])("paragraph splitting with %s", (ext) => {
+
+  const paragraphs = captionParserByExtension[ext](MULTI_PARAGRAPH_CAPTION);
+  assert("children" in paragraphs);
+
+  // Filter out "\n" text nodes that Markdown parser generates for
+  // some reason. They are unnecessary but shouldn't change how the
+  // resulting xhtml is displayed.
+  const children = paragraphs.children.filter((node) =>
+    !(node.type === "text" && node.value === "\n")
+  );
+
+  for (const p of children) {
     assert.propertyVal(p, "type", "element");
     assert(p.type === "element");
     expect(p).toHaveProperty("name", "p");
@@ -35,5 +49,5 @@ test("paragraph splitting", () => {
     }
   }
 
-  expect(paragraphs.children, "wrong number of paragraphs").toHaveLength(3);
+  expect(children, "wrong number of paragraphs").toHaveLength(3);
 });
