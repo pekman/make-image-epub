@@ -20,12 +20,13 @@ below must be ignored; there is no empty paragraph at the end.
 `;
 
 
-type Ext = keyof typeof captionParserByExtension;
-
-test.each([
+const EXTENSIONS = [
   "txt",
   "markdown",
-] satisfies Ext[])("paragraph splitting with %s", (ext) => {
+] as const satisfies (keyof typeof captionParserByExtension)[];
+
+
+test.each(EXTENSIONS)("paragraph splitting with %s", (ext) => {
 
   const paragraphs = captionParserByExtension[ext](MULTI_PARAGRAPH_CAPTION);
   assert("children" in paragraphs);
