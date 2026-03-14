@@ -7,8 +7,8 @@
   "author": "Pekka Ekman <pekman@users.noreply.github.com>",
   "license": "AGPL-3.0-or-later",
   "scripts": {
-    "build": "tsx ./esbuild.ts",
-    "dev": "tsx ./esbuild.ts --watch",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest",
@@ -28,9 +28,9 @@
     "@types/xast": "^2.0.4",
     "@types/yargs": "^17.0.35",
     "epubchecker": "^5.2.1",
-    "esbuild": "^0.27.3",
     "eslint": "^10.0.2",
-    "tsx": "^4.21.0",
+    "rolldown": "1.0.0-rc.9",
+    "tsdown": "^0.21.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
