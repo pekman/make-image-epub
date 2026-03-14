@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { createWriteStream } from "node:fs";
 import { argv, stdout } from "node:process";
 import { Writable } from "node:stream";

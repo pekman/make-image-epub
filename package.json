@@ -6,13 +6,16 @@
   "keywords": [],
   "author": "Pekka Ekman <pekman@users.noreply.github.com>",
   "license": "AGPL-3.0-or-later",
+  "bin": "./dist/cli.js",
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest",
-    "check": "pnpm run typecheck && pnpm run lint && vitest run"
+    "check": "pnpm run typecheck && pnpm run lint && vitest run",
+    "cli": "node ./dist/cli",
+    "prepare": "pnpm run build"
   },
   "engines": {
     "node": ">=24.14.0"
