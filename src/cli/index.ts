@@ -121,6 +121,19 @@ const args = yargs(argv.slice(2))
             `${key}:\n${val}\n\n`
           ).join(""),
       });
+
+      yargs.epilogue(paragraphs`
+        Captions
+
+        Each image can have an optional caption in a separate file. A
+        caption file must have the same base name as the image but a
+        different extension. E.g. "image1.jpg" should have its caption
+        in "image1.txt". Allowed extensions are ".txt" for plain text
+        and ".md" for Markdown.
+
+        Markdown is parsed according to CommonMark
+        <https://commonmark.org/>. Embedded HTML is not supported.
+      `);
     },
   )
   .strict()
