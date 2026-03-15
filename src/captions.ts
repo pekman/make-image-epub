@@ -1,18 +1,29 @@
 import { toXast } from "hast-util-to-xast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { toHast } from "mdast-util-to-hast";
-import type { Nodes } from "xast";
 import { x } from "xastscript";
 
 import type { EpubParameters } from "./epub-parameters.js";
 
 
-const parseMarkdownCaption = (markdown: string): Nodes =>
+/** Image caption.
+ *
+ * (Opaque branded type)
+ */
+export type Caption = object & { readonly __brand: "Caption" };
+
+
+const parseMarkdownCaption = (markdown: string): Caption =>
   toXast(
     toHast(
-      fromMarkdown(markdown)));
+      fromMarkdown(markdown)
+    )
+  ) as unknown as Caption;
 
-function parseTextCaption(text: string, epubParameters: EpubParameters): Nodes {
+function parseTextCaption(
+  text: string,
+  epubParameters: EpubParameters,
+): Caption {
   switch (epubParameters.txtFormatting) {
 
     case "flow":
@@ -22,10 +33,10 @@ function parseTextCaption(text: string, epubParameters: EpubParameters): Nodes {
           .trim()
           .split(/\n\s*\n/)
           .map((paragraph) => x("p", paragraph.trim())),
-      );
+      ) as unknown as Caption;
 
     case "verbatim":
-      return x("pre", text);
+      return x("pre", text) as unknown as Caption;
 
     case "markdown":
       return parseMarkdownCaption(text);

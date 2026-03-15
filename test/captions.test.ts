@@ -1,4 +1,5 @@
 import { assert, expect, test } from "vitest";
+import type { Nodes } from "xast";
 import { captionParserByExtension } from "../src/captions.js";
 
 
@@ -31,7 +32,7 @@ test.each(EXTENSIONS)("paragraph splitting with %s", (ext) => {
   const paragraphs = captionParserByExtension[ext](MULTI_PARAGRAPH_CAPTION, {
     title: "test title",
     language: "en",
-  });
+  }) as unknown as Nodes;
   assert("children" in paragraphs);
 
   // Filter out "\n" text nodes that Markdown parser generates for

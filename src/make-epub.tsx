@@ -5,6 +5,7 @@ import { toXml } from "xast-util-to-xml";
 import { x } from "xastscript";
 import type { Nodes } from "xast";
 
+import type { Caption } from "./captions.js";
 import {
   iterDublinCoreMetadata,
   splitRoleAndValue,
@@ -27,7 +28,7 @@ export interface ImageSource {
 
   readImage(): Promise<ReadableStream<Uint8Array> | Uint8Array>;
   getTimestamp?(): Promise<Date | null | undefined>;
-  readCaption?(): Promise<string | Nodes | null | undefined>;
+  readCaption?(): Promise<string | Caption | null | undefined>;
 }
 
 
@@ -221,7 +222,7 @@ const makeNavigationDocument = (
 
 const makePageXhtml = (
   image: ImageInfo,
-  caption: string | Nodes | null | undefined,
+  caption: string | Caption | null | undefined,
   epubParameters: EpubParameters,
 ) => makeXml(
   <html
@@ -235,7 +236,11 @@ const makePageXhtml = (
     <body>
       <img src={image.destPath} />
       {caption != null
-        ? <div id="caption">{caption}</div>
+        ? (
+          <div id="caption">
+            {caption as string | Nodes | null | undefined}
+          </div>
+        )
         : null
       }
     </body>
