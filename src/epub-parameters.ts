@@ -1,3 +1,6 @@
+import { paragraphs } from "./docstring-helper.js";
+
+
 interface DCKeyInfo {
   supportsRole?: boolean;
   noMultiple?: true;
@@ -25,13 +28,13 @@ export const DUBLIN_CORE_METADATA_KEYS = {
       return converted;
     },
 
-    help:
-      "publication date. Different levels of precision allowed: " +
-      "year, month, day, time with or without seconds or time zone. " +
-      "Format: yyyy[-mm[-dd[Thh:mm[:ss[.fraction]][Z|±hh:mm]]]] " +
-      "(see <https://www.w3.org/TR/NOTE-datetime>). Space is also " +
-      'allowed in place of "T". Examples: "2026", "2026-01", ' +
-      '"2026-01-01 12:34Z"',
+    help: paragraphs`
+      publication date. Different levels of precision allowed: year,
+      month, day, time with or without seconds or time zone. Format:
+      yyyy[-mm[-dd[Thh:mm[:ss[.fraction]][Z|±hh:mm]]]] (see
+      <https://www.w3.org/TR/NOTE-datetime>). Space is also allowed in
+      place of "T". Examples: "2026", "2026-01", "2026-01-01 12:34Z"
+    `,
   },
 
   // then in alphabetical order
@@ -91,18 +94,21 @@ export function splitRoleAndValue(
 }
 
 export const TxtCaptionFormatting = {
-  flow:
-    "Split text into paragraphs. An empty line is considered a " +
-    "paragraph break. Other line breaks are not preserved; text " +
-    "flows naturally as paragraphs.",
+  flow: paragraphs`
+    Split text into paragraphs. An empty line is considered a
+    paragraph break. Other line breaks are not preserved; text flows
+    naturally as paragraphs.
+  `,
 
-  verbatim:
-    "Put text as-is in a <pre> html element. Preserve spaces and " +
-    "line breaks. Text is displayed with a monospace font.",
+  verbatim: paragraphs`
+    Put text as-is in a <pre> html element. Preserve spaces and line
+    breaks. Text is displayed with a monospace font.
+  `,
 
-  markdown:
-    "Process as Markdown. This may be useful for some simple " +
-    "formattings, such as *italic*.",
+  markdown: paragraphs`
+    Process as Markdown. This may be useful for some simple
+    formattings, such as *italic*.
+  `,
 } as const;
 
 export interface EpubParameters extends DublinCoreMetadata {

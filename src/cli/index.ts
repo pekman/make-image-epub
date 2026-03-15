@@ -5,6 +5,7 @@ import { argv, stdout } from "node:process";
 import { Writable } from "node:stream";
 import yargs, { type Arguments } from "yargs";
 
+import { paragraphs } from "../docstring-helper.js";
 import {
   getDublinCoreKeyInfo,
   TxtCaptionFormatting,
@@ -54,10 +55,12 @@ const args = yargs(argv.slice(2))
         .positional("images-or-directories", {
           type: "string",
           array: true,
-          describe: "source images or directories. " +
-            "Directories are searched recursively. Images within a " +
-            "directory are sorted in natural order (numbers in " +
-            "filenames are compared numerically).",
+          describe: paragraphs`
+            source images or directories. Directories are searched
+            recursively. Images within a directory are sorted in
+            natural order (numbers in filenames are compared
+            numerically).
+          `,
         })
         .option("language", {
           group: "Document options:",
@@ -66,22 +69,26 @@ const args = yargs(argv.slice(2))
           requiresArg: true,
           coerce: onlyOneValue("language"),
           default: "en",
-          describe: "EPUB language. " +
-            'RFC 5646 language code, such as "en" or "en-GB".',
+          describe: paragraphs`
+            EPUB language. RFC 5646 language code, such as "en" or
+            "en-GB".
+          `,
         });
 
-      const group = "Dublin Core metadata options:" +
-        "\n\n  " +
-        "Optional Dublin Core metadata fields." +
-        "\n\n  " +
-        "Some fields can be prefixed with 3-letter role identifier " +
-        'and a colon, e.g. "art:Name" for artist. For identifier ' +
-        "descriptions, see " +
-        "<https://id.loc.gov/vocabulary/relators.html>" +
-        "\n\n  " +
-        "For field descriptions, see " +
-        "<https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#section-3>" +
-        "\n";
+      const group = paragraphs`
+        Dublin Core metadata options:
+
+          Optional Dublin Core metadata fields.
+
+          Some fields can be prefixed with 3-letter role identifier
+          and a colon, e.g. "art:Name" for artist. For identifier
+          descriptions, see
+          <https://id.loc.gov/vocabulary/relators.html>
+
+          For field descriptions, see
+          <https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#section-3>
+
+      `;
 
       for (const [name, info] of getDublinCoreKeyInfo()) {
         yargs.option(name, {
