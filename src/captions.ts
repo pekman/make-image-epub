@@ -1,6 +1,7 @@
 import { toXast } from "hast-util-to-xast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { toHast } from "mdast-util-to-hast";
+import type { Nodes } from "xast";
 import { x } from "xastscript";
 
 import type { EpubParameters } from "./epub-parameters.js";
@@ -13,20 +14,43 @@ import type { EpubParameters } from "./epub-parameters.js";
 export type Caption = object & { readonly __brand: "Caption" };
 
 
-const parseMarkdownCaption = (markdown: string): Caption =>
-  toXast(
-    toHast(
-      fromMarkdown(
-        markdown,
-        {
-          extensions: [{
-            // Disable parsing html tags. Parse them as text.
-            disable: { null: ["htmlFlow", "htmlText"] },
-          }],
-        },
+function parseMarkdownCaption(markdown: string): Caption {
+  const xhtml =
+    toXast(
+      toHast(
+        fromMarkdown(
+          markdown,
+          {
+            extensions: [{
+              // Disable parsing html tags. Parse them as text.
+              disable: { null: ["htmlFlow", "htmlText"] },
+            }],
+          },
+        )
       )
-    )
-  ) as unknown as Caption;
+    );
+
+  // Remove redundant xmlns. This will only ever be inserted in XHTML.
+  function removeHtmlXmlns(node: Nodes) {
+    if (
+      node.type === "element" &&
+      node.attributes["xmlns"] === "http://www.w3.org/1999/xhtml"
+    ) {
+      delete node.attributes["xmlns"];
+    }
+  }
+
+  if (xhtml.type === "root") {
+    for (const node of xhtml.children) {
+      removeHtmlXmlns(node);
+    }
+  }
+  else {
+    removeHtmlXmlns(xhtml);
+  }
+
+  return xhtml as unknown as Caption;
+}
 
 function parseTextCaption(
   text: string,
