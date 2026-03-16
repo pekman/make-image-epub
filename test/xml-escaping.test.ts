@@ -1,5 +1,6 @@
 import * as zip from "@zip.js/zip.js";
-import { expect, test, vi, type MockedClass } from "vitest";
+import { assert, expect, test, vi, type MockedClass } from "vitest";
+
 import { captionParserByExtension } from "../src/captions.js";
 import type { EpubParameters } from "../src/epub-parameters.js";
 import { makeEpub } from "../src/make-epub.js";
@@ -47,52 +48,60 @@ async function makeEpubWithCaption(
   const pageXhtml = TextReaderMock.mock.calls.find(
     ([text]) => text.includes("=TEST=")
   )?.[0];
-  expect(
-    pageXhtml,
-    "test.xhtml not found or recognized",
-  ).not.toBeNullable();
+  assert(pageXhtml != null, "test string should be found in a file in EPUB");
 
-  return pageXhtml;
+  return /=TEST=(.*)=\/TEST=/s.exec(pageXhtml)?.[1];
 }
 
+
 test.for([
-  { title: "=TEST= <not-a-tag> &not-an-entity;" },
-  { creator: ["=TEST= <not-a-tag> &not-an-entity;"] },
+  { title: "=TEST= <not-a-tag> &not-an-entity; =/TEST=" },
+  { creator: ["=TEST= <not-a-tag> &not-an-entity; =/TEST="] },
 ])("XML escaping in metadata field: %j", async (params) => {
-  const pageXhtml = await makeEpubWithCaption("txt", "", params);
+  const testStr = await makeEpubWithCaption("txt", "", params);
 
-  expect(pageXhtml).toMatch(
-    /=TEST= (&lt;|&#x3C;)not-a-tag(>|&gt;|&#x3E;) &(amp|#x26);not-an-entity;/
+  expect(testStr).toMatch(
+    /^ (&lt;|&#x3C;)not-a-tag(>|&gt;|&#x3E;) &(amp|#x26);not-an-entity; $/
   );
 });
 
-test.for(EXTENSIONS)("XML escaping with %s caption", async (ext) => {
-  const pageXhtml = await makeEpubWithCaption(
+test.for(EXTENSIONS)("XML escaping in %s caption", async (ext) => {
+  const testStr = await makeEpubWithCaption(
     ext,
-    "=TEST= <not-a-tag> &not-an-entity;"
+    "=TEST= <not-a-tag> &not-an-entity; =/TEST="
   );
 
-  expect(pageXhtml).toMatch(
-    /=TEST= (&lt;|&#x3C;)not-a-tag(>|&gt;|&#x3E;) &(amp|#x26);not-an-entity;/
+  expect(testStr).toMatch(
+    /^ (&lt;|&#x3C;)not-a-tag(>|&gt;|&#x3E;) &(amp|#x26);not-an-entity; $/
   );
 });
 
 
-// TODO: Fails because these characters not filtered. Needs fix.
-test.fails.for(
+test("unallowed character removal in title", async () => {
+  const testStr = await makeEpubWithCaption(
+    "txt",
+    "",
+    { title: "=TEST=\x00-\x01-\uFFFE-\uFFFF-\uD888=/TEST=" },
+  );
+
+  // Apparently something in the Unified ecosystem removes ASCII
+  // control characters before our code has a chance to replace them
+  // with replacement character \uFFFD. For some reason, it doesn't
+  // strip other unallowed characters. Either way is fine (but creates
+  // confusing test cases).
+  expect(testStr).toEqual("--\uFFFD-\uFFFD-\uFFFD");
+});
+
+test.for(
   EXTENSIONS,
-)("unallowed character removal with %s caption", async (ext) => {
-  const pageXhtml = await makeEpubWithCaption(
+)("unallowed character removal in %s caption", async (ext) => {
+  const testStr = await makeEpubWithCaption(
     ext,
-    // see https://www.w3.org/TR/xml11/#charsets
-    "=TEST=" +
-    "\x00\uFFFE\uFFFF\uD888" +  // not allowed
-    "-" +
-    "\x07\x7F" +  // "restricted"
-    "-" +
-    "\uFDDF\u{1FFFF}" +  // "discouraged"
-    "=END OF TEST="
+    "=TEST=\x00-\x01-\uFFFE-\uFFFF-\uD888=/TEST=",
   );
 
-  expect(pageXhtml).toMatch(/=TEST=\uFFFD*-\uFFFD*-\uFFFD*=END OF TEST=/);
+  // See note above. Additionally, it seems that something in Markdown
+  // pipeline replaces \x00 with \uFFFD instead on removing it. Either
+  // way is fine, but we have to handle both cases.
+  expect(testStr).toMatch(/^\uFFFD?--\uFFFD-\uFFFD-\uFFFD$/);
 });

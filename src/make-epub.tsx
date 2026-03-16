@@ -68,7 +68,16 @@ const XML_DECLARATION = {
 
 const makeXml = (tree: Nodes) => toXml(
   [XML_DECLARATION, tree],
-  { closeEmptyElements: true });
+  { closeEmptyElements: true },  // use <tag /> syntax
+)
+  .toWellFormed()
+  .replace(
+    // Allow only characters allowed in XML 1.0 spec
+    // https://www.w3.org/TR/xml/#charsets
+    // eslint-disable-next-line no-control-regex
+    /[\x00-\x08\x0B\x0C\x0E-\x1F\uD800-\uDFFF\uFFFE\uFFFF]/gu,
+    "\uFFFD",  // replacement character
+  );
 
 
 const imageFilenameToXhtmlFilename = (imgName: string) =>
