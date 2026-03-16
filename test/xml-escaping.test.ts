@@ -4,11 +4,19 @@ import { captionParserByExtension } from "../src/captions.js";
 import type { EpubParameters } from "../src/epub-parameters.js";
 import { makeEpub } from "../src/make-epub.js";
 
+
+const EXTENSIONS = [
+  "txt",
+  "markdown",
+] as const satisfies (keyof typeof captionParserByExtension)[];
+
+
 vi.mock("@zip.js/zip.js", { spy: true });
 
 const TextReaderMock = zip.TextReader as unknown as MockedClass<
   typeof zip.TextReader
 >;
+
 
 async function makeEpubWithCaption(
   ext: typeof EXTENSIONS[number],
@@ -58,9 +66,9 @@ test.for([
   );
 });
 
-test("XML escaping with txt caption", async () => {
+test.for(EXTENSIONS)("XML escaping with %s caption", async (ext) => {
   const pageXhtml = await makeEpubWithCaption(
-    "txt",
+    ext,
     "=TEST= <not-a-tag> &not-an-entity;"
   );
 
@@ -69,23 +77,11 @@ test("XML escaping with txt caption", async () => {
   );
 });
 
-test("XHTML escaping and tag removal with Markdown caption", async () => {
-  const pageXhtml = await makeEpubWithCaption(
-    "markdown",
-    "=TEST= <not-a-tag> &not-an-entity;"
-  );
-
-  expect(pageXhtml).toMatch(/=TEST= {1,2}&(amp|#x26);not-an-entity;/);
-});
-
-
-const EXTENSIONS = [
-  "txt",
-  "markdown",
-] as const satisfies (keyof typeof captionParserByExtension)[];
 
 // TODO: Fails because these characters not filtered. Needs fix.
-test.fails.for(EXTENSIONS)("unallowed character removal with %s", async (ext) => {
+test.fails.for(
+  EXTENSIONS,
+)("unallowed character removal with %s caption", async (ext) => {
   const pageXhtml = await makeEpubWithCaption(
     ext,
     // see https://www.w3.org/TR/xml11/#charsets

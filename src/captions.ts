@@ -16,7 +16,15 @@ export type Caption = object & { readonly __brand: "Caption" };
 const parseMarkdownCaption = (markdown: string): Caption =>
   toXast(
     toHast(
-      fromMarkdown(markdown)
+      fromMarkdown(
+        markdown,
+        {
+          extensions: [{
+            // Disable parsing html tags. Parse them as text.
+            disable: { null: ["htmlFlow", "htmlText"] },
+          }],
+        },
+      )
     )
   ) as unknown as Caption;
 
