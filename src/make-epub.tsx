@@ -239,7 +239,7 @@ const makePageXhtml = (
     lang={epubParameters.language}
   >
     <head>
-      <title>{epubParameters.title}</title>
+      <title>{image.displayedName}</title>
       <link rel="stylesheet" href="style.css" />
     </head>
     <body>
