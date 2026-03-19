@@ -33,6 +33,10 @@ const options: ParseArgsOptionsConfig = {
   "txt-formatting": {
     type: "string",
   },
+  overwrite: {
+    type: "boolean",
+    short: "f",
+  },
   "no-progress": {
     type: "boolean",
     short: "q",
@@ -163,6 +167,7 @@ function usage() {
         `${key}:\n${val}\n\n`
       ).join(""),
     ],
+    ["-f, --overwrite", "overwrite output file if it exists"],
     ["-q, --no-progress", "don't show progress"],
     ["-h, --help", "show help"],
   );
@@ -221,8 +226,9 @@ const {
   positionals: [ title, epubFilename, ...imagesOrDirectories ],
   values: {
     help,
-    "no-progress": noProgress,
     "txt-formatting": txtFormatting,
+    overwrite,
+    "no-progress": noProgress,
     ...otherOpts
   },
 } = parseResult;
@@ -263,7 +269,7 @@ await makeEpub(
   Writable.toWeb(
     epubFilename === "-"
       ? stdout
-      : createWriteStream(epubFilename, { flags: "wx" })
+      : createWriteStream(epubFilename, { flags: overwrite ? "w" : "wx" })
   ),
 );
 
