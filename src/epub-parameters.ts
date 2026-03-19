@@ -115,5 +115,5 @@ export interface EpubParameters extends DublinCoreMetadata {
   readonly title: string;
   readonly language: string;
 
-  txtFormatting?: keyof typeof TxtCaptionFormatting;
+  txtFormatting?: (keyof typeof TxtCaptionFormatting) | undefined;
 }

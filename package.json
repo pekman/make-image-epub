@@ -1,7 +1,7 @@
 {
   "name": "make-image-epub",
   "version": "0.0.1",
-  "description": "",
+  "description": "Create EPUB document from image files and text captions",
   "type": "module",
   "keywords": [],
   "author": "Pekka Ekman <pekman@users.noreply.github.com>",
@@ -47,8 +47,8 @@
     "pathe": "^2.0.3",
     "strip-indent": "^4.1.1",
     "unicode-case-folding": "^1.1.1",
+    "word-wrap": "^1.2.5",
     "xast-util-to-xml": "^4.0.0",
-    "xastscript": "^4.0.0",
-    "yargs": "^18.0.0"
+    "xastscript": "^4.0.0"
   }
 }

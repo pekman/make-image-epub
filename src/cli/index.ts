@@ -1,145 +1,243 @@
 #!/usr/bin/env node
 
 import { createWriteStream } from "node:fs";
-import { argv, stdout } from "node:process";
+import { basename } from "node:path";
+import { argv, exit, stderr, stdout } from "node:process";
 import { Writable } from "node:stream";
-import yargs, { type Arguments } from "yargs";
+import { parseArgs, type ParseArgsOptionsConfig } from "node:util";
+import wrap from "word-wrap";
 
 import { paragraphs } from "../docstring-helper.js";
 import {
   getDublinCoreKeyInfo,
   TxtCaptionFormatting,
-  type DublinCoreMetadata,
+  type EpubParameters,
 } from "../epub-parameters.js";
 import { makeEpub } from "../make-epub.js";
 import { findImages } from "./find-images.js";
 import { ImageReader } from "./image-reader.js";
 
+import packageJson from "../../package.json" with { type: "json" };
 
-interface CliArgs extends DublinCoreMetadata {
-  title: string;
-  epubFilename: string;
-  imagesOrDirectories: string[];
-  language: string;
+
+const options: ParseArgsOptionsConfig = {
+  help: {
+    type: "boolean",
+    short: "h",
+  },
+  language: {
+    type: "string",
+    short: "l",
+    default: "en",
+  },
+  "txt-formatting": {
+    type: "string",
+  },
+};
+
+const getDublinCoreShortOpt = (opt: string) => ({
+  creator: "c",
+  date: "d",
+})[opt];
+
+for (const [key] of getDublinCoreKeyInfo()) {
+  const short = getDublinCoreShortOpt(key);
+  options[key] = {
+    type: "string",
+    multiple: true,  // always return array, but check it later if noMultiple
+    ...(short && { short }),
+  };
 }
 
-const args = yargs(argv.slice(2))
-  .alias("help", "h")
-  .command(
-    "$0 [options] <title> <epub-filename> <images-or-directories...>",
-    "Create EPUB document from image files and text captions.",
-    (yargs) => {
-      // Coercion function factory for options that don't support
-      // multiple values
-      const onlyOneValue = (optname: string) => <T>(val: T | T[]) => {
-        if (Array.isArray(val)) {
-          throw new Error(`only one --${optname} option allowed`);
-        }
-        return val;
+
+function usage() {
+  // Note: Neither word-wrap package nor String.length is Unicode- or
+  // ANSI-escape-aware. Things that will break this code include
+  // Unicode modifier characters, wide characters, and ANSI escapes.
+
+  const screenWidth = Math.max(20, stderr.columns ?? 72);
+
+  const print = (indent: number = 0, text: string = "") =>
+    console.error(wrap(text, {
+      width: screenWidth - indent,
+      indent: " ".repeat(indent),
+      trim: true,
+    }));
+
+  function print2Col(
+    indent: number,
+    spacing: number,
+    ...lines: [string, string][]
+  ) {
+    const col1Width = indent + Math.max(...lines.map(([col1]) => col1.length));
+    const col2Width = screenWidth - col1Width - spacing;
+    if (col2Width >= 20) {
+      const options = {
+        width: col2Width,
+        indent: " ".repeat(col1Width + spacing),
+        trim: true,
       };
-
-      // Coercion function for options that support multiple values.
-      // Ensures that the value is an array.
-      const ensureArray = <T>(val: T | T[]) =>
-        Array.isArray(val) ? val : [val];
-
-      yargs
-        .positional("title", {
-          type: "string",
-          describe: "EPUB document title",
-        })
-        .positional("epub-filename", {
-          type: "string",
-          describe: 'output EPUB file ("-" = pipe to stdout)',
-        })
-        .positional("images-or-directories", {
-          type: "string",
-          array: true,
-          describe: paragraphs`
-            source images or directories. Directories are searched
-            recursively. Images within a directory are sorted in
-            natural order (numbers in filenames are compared
-            numerically).
-          `,
-        })
-        .option("language", {
-          group: "Document options:",
-          alias: "l",
-          type: "string",
-          requiresArg: true,
-          coerce: onlyOneValue("language"),
-          default: "en",
-          describe: paragraphs`
-            EPUB language. RFC 5646 language code, such as "en" or
-            "en-GB".
-          `,
-        });
-
-      const group = paragraphs`
-        Dublin Core metadata options:
-
-          Optional Dublin Core metadata fields.
-
-          Some fields can be prefixed with 3-letter role identifier
-          and a colon, e.g. "art:Name" for artist. For identifier
-          descriptions, see
-          <https://id.loc.gov/vocabulary/relators.html>
-
-          For field descriptions, see
-          <https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#section-3>
-
-      `;
-
-      for (const [name, info] of getDublinCoreKeyInfo()) {
-        yargs.option(name, {
-          group,
-          type: "string",
-          requiresArg: true,
-          alias: {
-            creator: "c",
-            date: "d",
-          }[name],
-          describe: [
-            info?.help,
-            info?.noMultiple ? null : "Can be given multiple times.",
-            info?.supportsRole && "Supports role identifier.",
-          ].filter((item) => item).join(" "),
-          coerce: (val: string | string[]) =>
-            (info?.noMultiple
-              ? [onlyOneValue(name)(val)]
-              : ensureArray(val)
-            ).map(info?.converter ?? ((val) => val)),
-        })
+      for (const [col1, col2] of lines) {
+        console.error(
+          " ".repeat(indent) + col1 +
+            wrap(col2, options).slice(indent + col1.length)
+        );
       }
+    }
+    else {
+      // put column 2 to next line indented with 2 more spaces
+      const options = {
+        width: screenWidth - indent - 2,
+        indent: " ".repeat(indent + 2),
+        trim: true,
+      };
+      for (const [col1, col2] of lines) {
+        console.error(" ".repeat(indent) + col1);
+        console.error(wrap(col2, options));
+      }
+    }
+  }
 
-      yargs.option("txt-formatting", {
-        type: "string",
-        choices: Object.keys(TxtCaptionFormatting),
-        requiresArg: true,
-        describe: "formatting for captions from .txt files.\nValues:\n\n" +
-          Object.entries(TxtCaptionFormatting).map(([key, val]) =>
-            `${key}:\n${val}\n\n`
-          ).join(""),
-      });
-
-      yargs.epilogue(paragraphs`
-        Captions
-
-        Each image can have an optional caption in a separate file. A
-        caption file must have the same base name as the image but a
-        different extension. E.g. "image1.jpg" should have its caption
-        in "image1.txt". Allowed extensions are ".txt" for plain text
-        and ".md" for Markdown.
-
-        Markdown is parsed according to CommonMark
-        <https://commonmark.org/>. Embedded HTML is not supported.
-      `);
-    },
+  print2Col(0, 1, [
+    `Usage: ${basename(String(argv[1]))}`,
+    "[options] <title> <epub-filename> <images-or-directories...>",
+  ]);
+  print();
+  print(0, packageJson.description +
+    (packageJson.description.endsWith(".") ? "" : "."))
+  print();
+  print(0, "Positional arguments:");
+  print2Col(2, 2,
+    ["title", "EPUB document title"],
+    ["epub-filename", 'output EPUB file ("-" = pipe to stdout)'],
+    ["images-or-directories", paragraphs`
+      source images or directories. Directories are searched
+      recursively. Images within a directory are sorted in natural
+      order (numbers in filenames are compared numerically).
+    `],
   )
-  .strict()
-  .parseSync() as Arguments<CliArgs>;
+  print();
+  print(0, "Document options:");
+  print2Col(2, 2,
+    [
+      "-l, --language=…",
+      'EPUB language. RFC 5646 language code, such as "en" or en-GB.' +
+      ` Default: "${options["language"]?.default}"`
+    ],
+  );
+  print();
+  print(0, "Document metadata options:");
+  print();
+  print(2, paragraphs`
+    Optional Dublin Core metadata fields.
 
-const { epubFilename, imagesOrDirectories } = args;
+    Some fields can be prefixed with 3-letter role identifier and a
+    colon, e.g. "art:Name" for artist. For identifier descriptions,
+    see <https://id.loc.gov/vocabulary/relators.html>
+
+    For field descriptions, see
+    <https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#section-3>
+  `);
+  print();
+  print2Col(2, 2,
+    ...getDublinCoreKeyInfo().map<[string, string]>(([key, info]) => [
+      ((short) => short ? `-${short}, ` : "")(getDublinCoreShortOpt(key)) +
+        `--${key}=…`,
+      [
+        info?.help,
+        info?.noMultiple ? null : "Can be given multiple times.",
+        info?.supportsRole && "Supports role identifier.",
+      ].filter((item) => item).join(" "),
+    ]),
+  );
+  print();
+  print(0, "Other options:");
+  print2Col(2, 2,
+    ["--txt-formatting=…",
+      "formatting for captions from .txt files.\nValues:\n\n" +
+      Object.entries(TxtCaptionFormatting).map(([key, val]) =>
+        `${key}:\n${val}\n\n`
+      ).join(""),
+    ],
+    ["-h, --help", "show help"],
+  );
+  print();
+  print(0, "Captions");
+  print();
+  print(2, paragraphs`
+    Each image can have an optional caption in a separate file. A
+    caption file must have the same base name as the image but a
+    different extension. E.g. "image1.jpg" should have its caption in
+    "image1.txt". Allowed extensions are ".txt" for plain text and
+    ".md" for Markdown.
+
+    Markdown is parsed according to CommonMark
+    <https://commonmark.org/>. Embedded HTML is not supported.
+  `);
+  print();
+}
+
+
+// parse and validate args
+let parseResult;
+try {
+  parseResult = parseArgs({
+    options,
+    allowPositionals: true,
+  });
+
+  for (const [key, info] of getDublinCoreKeyInfo()) {
+    if (key in parseResult.values) {
+      const values = parseResult.values[key] as string[];
+      if (info?.noMultiple && values.length > 1) {
+        throw new Error(`Only single --${key} allowed`);
+      }
+      if (info?.converter) {
+        parseResult.values[key] = values.map((val) => info.converter!(val));
+      }
+    }
+  }
+
+  const txtFmt = parseResult.values["txt-formatting"] as string | undefined;
+  if (!(txtFmt == null || txtFmt in TxtCaptionFormatting)) {
+    throw new Error("Invalid --txt-formatting value");
+  }
+}
+catch (err) {
+  if (!err || typeof err !== "object" || !("message" in err))
+    throw err;
+  console.error(err.message);
+  console.error();
+  usage();
+  exit(1);
+}
+
+const {
+  positionals: [ title, epubFilename, ...imagesOrDirectories ],
+  values: {
+    help,
+    "txt-formatting": txtFormatting,
+    ...otherOpts
+  },
+} = parseResult;
+
+if (help) {
+  usage();
+  exit(0);
+}
+if (title == null || epubFilename == null || imagesOrDirectories.length == 0) {
+  console.error("Missing positional arguments");
+  console.error();
+  usage();
+  exit(1);
+}
+
+const args: EpubParameters = {
+  ...otherOpts as unknown as EpubParameters,
+  title,
+  txtFormatting: txtFormatting as EpubParameters["txtFormatting"],
+};
+
 
 const images = await Array.fromAsync(findImages(imagesOrDirectories));
 
