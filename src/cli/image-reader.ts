@@ -12,10 +12,15 @@ export class ImageReader implements ImageSource {
   constructor(
     public readonly filename: string,
     public readonly epubParameters: EpubParameters,
+    private readonly onFinished?: () => void,
   ) {}
 
   async readImage(): Promise<ReadableStream<Uint8Array>> {
-    return Readable.toWeb(createReadStream(this.filename));
+    const stream = createReadStream(this.filename);
+    if (this.onFinished) {
+      stream.on("end", this.onFinished);
+    }
+    return Readable.toWeb(stream);
   }
 
   async readCaption() {

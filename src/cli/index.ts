@@ -33,6 +33,10 @@ const options: ParseArgsOptionsConfig = {
   "txt-formatting": {
     type: "string",
   },
+  "no-progress": {
+    type: "boolean",
+    short: "q",
+  },
 };
 
 const getDublinCoreShortOpt = (opt: string) => ({
@@ -159,6 +163,7 @@ function usage() {
         `${key}:\n${val}\n\n`
       ).join(""),
     ],
+    ["-q, --no-progress", "don't show progress"],
     ["-h, --help", "show help"],
   );
   print();
@@ -216,6 +221,7 @@ const {
   positionals: [ title, epubFilename, ...imagesOrDirectories ],
   values: {
     help,
+    "no-progress": noProgress,
     "txt-formatting": txtFormatting,
     ...otherOpts
   },
@@ -241,8 +247,18 @@ const args: EpubParameters = {
 
 const images = await Array.fromAsync(findImages(imagesOrDirectories));
 
+let onProgress = undefined;
+if (!noProgress) {
+  let done = -1;
+  onProgress = () => stderr.write(
+    `\r${++done}/${images.length} images processed (${
+      Math.round(100*done/images.length)
+    }%)`);
+  onProgress();
+}
+
 await makeEpub(
-  images.map((filename) => new ImageReader(filename, args)),
+  images.map((filename) => new ImageReader(filename, args, onProgress)),
   args,
   Writable.toWeb(
     epubFilename === "-"
@@ -250,3 +266,7 @@ await makeEpub(
       : createWriteStream(epubFilename, { flags: "wx" })
   ),
 );
+
+if (!noProgress) {
+  console.error();
+}
