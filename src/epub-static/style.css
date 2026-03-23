@@ -10,6 +10,12 @@ img {
   display: block;
 }
 
+video {
+  max-width: 100dvw;
+  max-height: 100dvh;
+  display: block;
+}
+
 #caption {
   display: inline-block;
   text-align: start;

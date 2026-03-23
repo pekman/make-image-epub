@@ -32,6 +32,23 @@ export interface ImageSource {
 }
 
 
+/** Return true if mimetype is supported. */
+export const isMimetypeSupported = (mimetype: string) =>
+  /^(?:image|video|audio)\//.test(mimetype);
+
+/** Return true if mimetype is one of EPUB core media types.
+ *
+ * Core media types are defined in
+ * https://www.w3.org/TR/epub-33/#sec-core-media-types
+ */
+const isCoreMediaType = (mimetype: string, path: string) =>
+  /^(?:image\/(?:gif|jpeg|png|svg\+xml|webp)|audio\/mp(?:eg|4))(?:;|$)/.test(
+    mimetype
+  ) || (
+    mimetype === "audio/ogg" && /\.opus$/i.test(path)
+  );
+
+
 class ImageInfo {
   /** image name shown to user */
   readonly displayedName: string;
@@ -49,9 +66,19 @@ class ImageInfo {
       console.warn("Warning: Cannot determine file type for %o", destPath);
       mimetype = "application/octet-stream";
     }
-    else if (!mimetype.startsWith("image/")) {
+    else if (!isMimetypeSupported(mimetype)) {
       console.warn(
-        "Warning: %o is not an image. It is %o.",
+        "Warning: %o is not a supported media file. It is %o.",
+        destPath, mimetype);
+    }
+    else if (!isCoreMediaType(mimetype, destPath) &&
+      // Don't warn about videos. There are no core media types for
+      // videos, and it would be silly to complain about every video.
+      !mimetype.startsWith("video/")
+    ) {
+      console.warn(
+        "Warning: %o may be incompatible with some readers." +
+        "Its media type, %o, is not an EPUB core media type.",
         destPath, mimetype);
     }
     this.mimetype = mimetype;
@@ -243,7 +270,25 @@ const makePageXhtml = (
       <link rel="stylesheet" href="style.css" />
     </head>
     <body>
-      <img src={image.destPath} />
+      {
+        image.mimetype.startsWith("video/") ? (
+          <video controls="controls">
+            <source src={image.destPath} type={image.mimetype} />
+            Your reader doesn't support playing this video.
+            <a href={image.destPath}>Open or download video</a>
+            (may not work on all readers)
+          </video>
+        ) : image.mimetype.startsWith("audio/") ? (
+          <audio controls="controls">
+            <source src={image.destPath} type={image.mimetype} />
+            Your reader doesn't support playing this audio file.
+            <a href={image.destPath}>Open or download audio file</a>
+            (may not work on all readers)
+          </audio>
+        ) : (
+          <img src={image.destPath} />
+        )
+      }
       {caption != null
         ? (
           <div id="caption">

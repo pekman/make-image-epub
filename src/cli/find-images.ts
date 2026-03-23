@@ -1,11 +1,12 @@
 import * as mime from "mime-types";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { isMimetypeSupported } from "../make-epub.js";
 
 
 function isImage(filename: string): boolean {
   const mimetype = mime.lookup(filename);
-  return !!mimetype && mimetype.startsWith("image/");
+  return !!mimetype && isMimetypeSupported(mimetype);
 }
 
 export async function* findImages(
