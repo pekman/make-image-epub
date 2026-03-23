@@ -17,6 +17,9 @@ export default defineConfig(
         // case statement indented inside switch
         "SwitchCase": 1,
       }],
+      "@typescript-eslint/no-unused-vars": ["error", {
+        "ignoreRestSiblings": true,  // allow { discard, ...filtered } = …
+      }],
     },
   },
   {

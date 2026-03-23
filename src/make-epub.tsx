@@ -240,19 +240,19 @@ const makeNavigationDocument = (
   images: readonly ImageInfo[],
   epubParameters: EpubParameters,
 ) => {
-  const destPathIter = images.values().map((img) => img.destPath);
-
-  const makeNavTree = (subtrees: readonly Tree<string>[]) =>
+  const makeNavTree = (subtrees: readonly Tree<{ href: string }>[]) =>
     <ol>
       {subtrees.map((subtree) =>
         <li>
-          {typeof subtree === "string" ? (
-            <a href={imageFilenameToXhtmlFilename(destPathIter.next().value!)}>
-              {subtree}
+          {"name" in subtree ? (
+            <a href={imageFilenameToXhtmlFilename(subtree.href)}>
+              {subtree.name}
             </a>
           ) : (
             <>
-              <span>{subtree[0]}</span>
+              <a href={imageFilenameToXhtmlFilename(subtree[0].href)}>
+                {subtree[0].name}
+              </a>
               {makeNavTree(subtree[1])}
             </>
           )}
@@ -271,7 +271,10 @@ const makeNavigationDocument = (
       </head>
       <body>
         <nav epub:type="toc">
-          {makeNavTree(makeTree(images.map((img) => img.displayedPath)))}
+          {makeNavTree(makeTree(images.map((img) => ({
+            path: img.displayedPath,
+            href: img.destPath,
+          }))))}
         </nav>
       </body>
     </html>
