@@ -1,9 +1,9 @@
 import * as zip from "@zip.js/zip.js";
 import * as mime from "mime-types";
 import * as pathe from "pathe";
+import type { Nodes } from "xast";
 import { toXml } from "xast-util-to-xml";
 import { x } from "xastscript";
-import type { Nodes } from "xast";
 
 import type { Caption } from "./captions.js";
 import {
@@ -12,6 +12,7 @@ import {
   type EpubParameters,
 } from "./epub-parameters.js";
 import { FilenameMangler, removeCommonPathPrefix } from "./filenames.js";
+import { makeTree, type Tree } from "./make-tree.js";
 
 import containerXml from "./epub-static/container.xml?raw";
 import styleCss from "./epub-static/style.css?raw";
@@ -53,14 +54,21 @@ class ImageInfo {
   /** image name shown to user */
   readonly displayedName: string;
 
+  /** image path shown in navigation UI */
+  readonly displayedPath: readonly string[];
+
   readonly mimetype: string;
 
   constructor(
-    srcPath: string,  // doesn't need to be the whole path; only filename used
+    srcPath: string,  // non-unique subpath, not the whole path
     /** image path in zip file relative to OEBPS/ directory */
     readonly destPath: string,
   ) {
-    this.displayedName = pathe.parse(srcPath).name;
+    const parsed = pathe.parse(srcPath);
+    this.displayedName = parsed.name;
+    this.displayedPath = parsed.dir === "."
+      ? [parsed.name]
+      : [...parsed.dir.split("/"), parsed.name];
 
     let mimetype = mime.lookup(destPath);
     if (!mimetype) {
@@ -231,30 +239,44 @@ const makeContentOpf = (
 const makeNavigationDocument = (
   images: readonly ImageInfo[],
   epubParameters: EpubParameters,
-) => makeXml(
-  <html
-    xmlns="http://www.w3.org/1999/xhtml"
-    xmlns:epub="http://www.idpf.org/2007/ops"
-    lang={epubParameters.language}
-  >
-    <head>
-      <title>{epubParameters.title}</title>
-    </head>
-    <body>
-      <nav epub:type="toc">
-        <ol>
-          {images.map(({ destPath, displayedName }) =>
-            <li>
-              <a href={imageFilenameToXhtmlFilename(destPath)}>
-                {displayedName}
-              </a>
-            </li>
+) => {
+  const destPathIter = images.values().map((img) => img.destPath);
+
+  const makeNavTree = (subtrees: readonly Tree<string>[]) =>
+    <ol>
+      {subtrees.map((subtree) =>
+        <li>
+          {typeof subtree === "string" ? (
+            <a href={imageFilenameToXhtmlFilename(destPathIter.next().value!)}>
+              {subtree}
+            </a>
+          ) : (
+            <>
+              <span>{subtree[0]}</span>
+              {makeNavTree(subtree[1])}
+            </>
           )}
-        </ol>
-      </nav>
-    </body>
-  </html>
-);
+        </li>
+      )}
+    </ol>;
+
+  return makeXml(
+    <html
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:epub="http://www.idpf.org/2007/ops"
+      lang={epubParameters.language}
+    >
+      <head>
+        <title>{epubParameters.title}</title>
+      </head>
+      <body>
+        <nav epub:type="toc">
+          {makeNavTree(makeTree(images.map((img) => img.displayedPath)))}
+        </nav>
+      </body>
+    </html>
+  );
+};
 
 
 const makePageXhtml = (
