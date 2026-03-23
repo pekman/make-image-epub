@@ -17,7 +17,7 @@ test("EPUB spec conformance", async ({ tmpdir }) => {
     language: "en",
   };
   const imageReaders = await Array.fromAsync(
-    glob(path.join(import.meta.dirname, "data", "*.png")),
+    glob(path.join(import.meta.dirname, "data", "**", "*.png")),
     (path) => new ImageReader(path, epubParameters),
   );
   await makeEpub(
