@@ -56,10 +56,11 @@ class ImageInfo {
   readonly mimetype: string;
 
   constructor(
+    srcPath: string,  // doesn't need to be the whole path; only filename used
     /** image path in zip file relative to OEBPS/ directory */
     readonly destPath: string,
   ) {
-    this.displayedName = pathe.parse(destPath).name;
+    this.displayedName = pathe.parse(srcPath).name;
 
     let mimetype = mime.lookup(destPath);
     if (!mimetype) {
@@ -313,7 +314,7 @@ export async function makeEpub(
   const imageInfos = removeCommonPathPrefix(
     imageSources.map((imgSrc) => imgSrc.filename),
   ).map(
-    (filename) => new ImageInfo(filenameMangler.mangle(filename))
+    (filename) => new ImageInfo(filename, filenameMangler.mangle(filename))
   );
 
   const zipWriter = new zip.ZipWriter(outputStream);
