@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
+import { extname, sep as pathSep } from "node:path";
 import { Readable } from "node:stream";
-import * as pathe from "pathe";
 
 import { captionParserByExtension } from "../captions.js";
 import type { EpubParameters } from "../epub-parameters.js";
@@ -9,11 +9,16 @@ import type { ImageSource } from "../make-epub.js";
 
 
 export class ImageReader implements ImageSource {
+  public readonly filename: string;
+
   constructor(
-    public readonly filename: string,
+    filename: string,
     public readonly epubParameters: EpubParameters,
     private readonly onFinished?: () => void,
-  ) {}
+  ) {
+    // replace \ with / on Windows
+    this.filename = filename.replaceAll(pathSep, "/");
+  }
 
   async readImage(): Promise<ReadableStream<Uint8Array>> {
     const stream = createReadStream(this.filename);
@@ -28,7 +33,7 @@ export class ImageReader implements ImageSource {
     // without and with extension, i.e. name.txt first, then
     // name.jpg.txt
     const basenameCandidates = [this.filename];
-    const ext = pathe.extname(this.filename);
+    const ext = extname(this.filename);
     if (ext !== "") {
       basenameCandidates.unshift(this.filename.slice(0, -ext.length));
     }

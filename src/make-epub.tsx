@@ -1,6 +1,5 @@
 import * as zip from "@zip.js/zip.js";
 import * as mime from "mime-types";
-import * as pathe from "pathe";
 import type { Nodes } from "xast";
 import { toXml } from "xast-util-to-xml";
 import { x } from "xastscript";
@@ -25,6 +24,7 @@ const ZIP_OPTIONS = {
 
 
 export interface ImageSource {
+  /** Image path. Must use "/" as directory separator, even on Windows. */
   filename: string;
 
   readImage(): Promise<ReadableStream<Uint8Array> | Uint8Array>;
@@ -64,11 +64,12 @@ class ImageInfo {
     /** image path in zip file relative to OEBPS/ directory */
     readonly destPath: string,
   ) {
-    const parsed = pathe.parse(srcPath);
-    this.displayedName = parsed.name;
-    this.displayedPath = parsed.dir === "."
-      ? [parsed.name]
-      : [...parsed.dir.split("/"), parsed.name];
+    const parts = srcPath.split("/");
+    this.displayedName = parts.at(-1)!.replace(filenameExtRe, "");
+    if (parts[0] === "" || parts[0] === ".") {
+      parts.shift();
+    }
+    this.displayedPath = parts;
 
     let mimetype = mime.lookup(destPath);
     if (!mimetype) {
@@ -116,8 +117,10 @@ const makeXml = (tree: Nodes) => toXml(
   );
 
 
+const filenameExtRe = /(?:\.[a-zA-Z0-9]+)?$/;
+
 const imageFilenameToXhtmlFilename = (imgName: string) =>
-  `${pathe.parse(imgName).name}.xhtml`;
+  imgName.replace(filenameExtRe, ".xhtml");
 
 
 const makeContentOpf = (
@@ -286,47 +289,56 @@ const makePageXhtml = (
   image: ImageInfo,
   caption: string | Caption | null | undefined,
   epubParameters: EpubParameters,
-) => makeXml(
-  <html
-    xmlns="http://www.w3.org/1999/xhtml"
-    lang={epubParameters.language}
-  >
-    <head>
-      <title>{image.displayedName}</title>
-      <link rel="stylesheet" href="style.css" />
-    </head>
-    <body>
-      {
-        image.mimetype.startsWith("video/") ? (
-          <video controls="controls">
-            <source src={image.destPath} type={image.mimetype} />
-            Your reader doesn't support playing this video.
-            <a href={image.destPath}>Open or download video</a>
-            (may not work on all readers)
-          </video>
-        ) : image.mimetype.startsWith("audio/") ? (
-          <audio controls="controls">
-            <source src={image.destPath} type={image.mimetype} />
-            Your reader doesn't support playing this audio file.
-            <a href={image.destPath}>Open or download audio file</a>
-            (may not work on all readers)
-          </audio>
-        ) : (
-          <img src={image.destPath} />
-        )
-      }
-      {caption != null
-        ? (
-          <div id="caption">
-            {caption as string | Nodes | null | undefined}
-          </div>
-        )
-        : null
-      }
-    </body>
-  </html>
-);
+) => {
+  // This .xhtml file goes to the same subdirectory as the image. Use
+  // filename without path as src.
+  const imgSrc = image.destPath.replace(/^.*\//s, "");
 
+  const styleCssHref = "../".repeat(
+    image.destPath.matchAll(/\//g).toArray().length
+  ) + "style.css";
+
+  return makeXml(
+    <html
+      xmlns="http://www.w3.org/1999/xhtml"
+      lang={epubParameters.language}
+    >
+      <head>
+        <title>{image.displayedName}</title>
+        <link rel="stylesheet" href={styleCssHref} />
+      </head>
+      <body>
+        {
+          image.mimetype.startsWith("video/") ? (
+            <video controls="controls">
+              <source src={imgSrc} type={image.mimetype} />
+              Your reader doesn't support playing this video.
+              <a href={imgSrc}>Open or download video</a>
+              (may not work on all readers)
+            </video>
+          ) : image.mimetype.startsWith("audio/") ? (
+            <audio controls="controls">
+              <source src={imgSrc} type={image.mimetype} />
+              Your reader doesn't support playing this audio file.
+              <a href={imgSrc}>Open or download audio file</a>
+              (may not work on all readers)
+            </audio>
+          ) : (
+            <img src={imgSrc} />
+          )
+        }
+        {caption != null
+          ? (
+            <div id="caption">
+              {caption as string | Nodes | null | undefined}
+            </div>
+          )
+          : null
+        }
+      </body>
+    </html>
+  );
+};
 
 export async function makeEpub(
   imageSources: readonly ImageSource[],

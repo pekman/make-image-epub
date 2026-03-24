@@ -1,4 +1,4 @@
-import * as pathe from "pathe";
+import { posix } from "path-browserify";
 import { caseFold } from "unicode-case-folding";
 
 
@@ -31,6 +31,8 @@ class UnicodeNormalizedCaseFoldedSet {
 
 /**
  * Convert filenames to conform with EPUB specs avoiding name collisions.
+ *
+ * Filenames must use "/" as directory separator even in Windows.
  *
  * See: https://www.w3.org/TR/epub-33/#sec-container-filenames
  */
@@ -71,16 +73,17 @@ export class FilenameMangler {
     "\\u{F0000}-\\u{FFFFF}" +  // Supplementary Private Use Area-A
     "\\u{100000}-\\u{10FFFF}" +  // Supplementary Private Use Area-B
 
-    // other rules from specification handled below:
-    // - \ changed to / by pathe.normalize
-    // - weird directory separator use corrected by pathe.normalize
-    // - "." as the last character converted separately
+    // other rules from specification handled elsewhere:
+    // - weird directory separator use corrected by posix.normalize below
+    // - "." as the last character converted separately below
+    // - \ changed to / on Windows before passing it to mangle(). This
+    //   is done in cli/image-reader.ts
     "]",
     "gu");
 
   mangle(path: string) {
     path = path.toWellFormed();
-    path = pathe.normalize(path);
+    path = posix.normalize(path);
     if (
       // path traversal attack
       path.startsWith("/") || path.startsWith("../") || path === ".." ||
@@ -94,7 +97,7 @@ export class FilenameMangler {
     let ext: string;
     const m = /^(.+?)(?:(\.[a-zA-Z0-9_-]+))?$/.exec(path);
     if (m) {
-      base = m[1] as string;
+      base = m[1]!;
       ext = (m[2] ?? "").toLowerCase();
     }
     else {
@@ -133,15 +136,19 @@ export class FilenameMangler {
 }
 
 
+/** Remove top directories common to all given paths.
+ *
+ * paths must use directory separator "/" even on Windows.
+ */
 export function removeCommonPathPrefix(paths: readonly string[]) {
   if (paths.length === 0)
     return paths;
 
-  paths = paths.map(pathe.normalize);
+  paths = paths.map(posix.normalize);
 
   for (;;) {
     // get part until first "/", including "/"
-    const firstPath = paths[0] as string;  // paths[0] exists, we checked
+    const firstPath = paths[0]!;
     const slashIdx = firstPath.indexOf("/");
     if (slashIdx < 0)  // if no "/", stop processing
       return paths;
