@@ -1,5 +1,7 @@
-import { posix } from "path-browserify";
+import path from "path-browserify";
 import { caseFold } from "unicode-case-folding";
+
+const posixPath = path.posix;
 
 
 export class InvalidPathError extends Error {
@@ -74,7 +76,7 @@ export class FilenameMangler {
     "\\u{100000}-\\u{10FFFF}" +  // Supplementary Private Use Area-B
 
     // other rules from specification handled elsewhere:
-    // - weird directory separator use corrected by posix.normalize below
+    // - weird directory separator use corrected by posixPath.normalize below
     // - "." as the last character converted separately below
     // - \ changed to / on Windows before passing it to mangle(). This
     //   is done in cli/image-reader.ts
@@ -83,7 +85,7 @@ export class FilenameMangler {
 
   mangle(path: string) {
     path = path.toWellFormed();
-    path = posix.normalize(path);
+    path = posixPath.normalize(path);
     if (
       // path traversal attack
       path.startsWith("/") || path.startsWith("../") || path === ".." ||
@@ -144,7 +146,7 @@ export function removeCommonPathPrefix(paths: readonly string[]) {
   if (paths.length === 0)
     return paths;
 
-  paths = paths.map(posix.normalize);
+  paths = paths.map(posixPath.normalize);
 
   for (;;) {
     // get part until first "/", including "/"
