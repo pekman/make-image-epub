@@ -33,6 +33,7 @@
     "@types/yargs": "^17.0.35",
     "epubchecker": "^5.2.1",
     "eslint": "^10.0.3",
+    "memfs": "^4.57.1",
     "rolldown": "1.0.0-rc.9",
     "tsdown": "^0.21.3",
     "typescript": "^5.9.3",

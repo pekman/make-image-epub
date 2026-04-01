@@ -57,6 +57,11 @@ export class ImageReader implements ImageSource {
       return text;
     }
 
+    // If this is a text-only page, simply read the file.
+    if (ext.toLowerCase() in captionParserByExtension) {
+      return tryRead(this.filename);
+    }
+
     // Search for possible caption files. Try different supported
     // file extensions with lower, title, and upper case.
     for (const [ext, parser] of Object.entries(captionParserByExtension)) {

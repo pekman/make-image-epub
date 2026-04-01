@@ -86,3 +86,8 @@ export const captionParserByExtension = {
   md: parseMarkdownCaption,
   txt: parseTextCaption,
 } as const;
+
+export function isCaptionFile(filenameOrPath: string): boolean {
+  const ext = /\.([^.]+)$/.exec(filenameOrPath)?.[1];
+  return ext != null && ext.toLowerCase() in captionParserByExtension;
+};

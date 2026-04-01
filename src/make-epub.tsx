@@ -4,7 +4,7 @@ import type { Nodes } from "xast";
 import { toXml } from "xast-util-to-xml";
 import { x } from "xastscript";
 
-import type { Caption } from "./captions.js";
+import { isCaptionFile, type Caption } from "./captions.js";
 import {
   iterDublinCoreMetadata,
   splitRoleAndValue,
@@ -57,7 +57,12 @@ class ImageInfo {
   /** image path shown in navigation UI */
   readonly displayedPath: readonly string[];
 
-  readonly mimetype: string;
+  /** Mimetype if image, undefined if caption without image */
+  readonly mimetype: string | undefined;
+
+  isTextOnlyPage() {
+    return this.mimetype === undefined;
+  }
 
   constructor(
     srcPath: string,  // non-unique subpath, not the whole path
@@ -71,27 +76,32 @@ class ImageInfo {
     }
     this.displayedPath = parts;
 
-    let mimetype = mime.lookup(destPath);
-    if (!mimetype) {
-      console.warn("Warning: Cannot determine file type for %o", destPath);
-      mimetype = "application/octet-stream";
+    if (isCaptionFile(destPath)) {
+      this.mimetype = undefined;
     }
-    else if (!isMimetypeSupported(mimetype)) {
-      console.warn(
-        "Warning: %o is not a supported media file. It is %o.",
-        destPath, mimetype);
+    else {
+      let mimetype = mime.lookup(destPath);
+      if (!mimetype) {
+        console.warn("Warning: Cannot determine file type for %o", destPath);
+        mimetype = "application/octet-stream";
+      }
+      else if (!isMimetypeSupported(mimetype)) {
+        console.warn(
+          "Warning: %o is not a supported media file. It is %o.",
+          destPath, mimetype);
+      }
+      else if (!isCoreMediaType(mimetype, destPath) &&
+        // Don't warn about videos. There are no core media types for
+        // videos, and it would be silly to complain about every video.
+        !mimetype.startsWith("video/")
+      ) {
+        console.warn(
+          "Warning: %o may be incompatible with some readers." +
+          "Its media type, %o, is not an EPUB core media type.",
+          destPath, mimetype);
+      }
+      this.mimetype = mimetype;
     }
-    else if (!isCoreMediaType(mimetype, destPath) &&
-      // Don't warn about videos. There are no core media types for
-      // videos, and it would be silly to complain about every video.
-      !mimetype.startsWith("video/")
-    ) {
-      console.warn(
-        "Warning: %o may be incompatible with some readers." +
-        "Its media type, %o, is not an EPUB core media type.",
-        destPath, mimetype);
-    }
-    this.mimetype = mimetype;
   }
 }
 
@@ -213,19 +223,25 @@ const makeContentOpf = (
         />
 
         <>{
-          images.entries().flatMap(([i, { destPath, mimetype }]) => [
-            <item
-              id={`page-${i + 1}`}
-              href={imageFilenameToXhtmlFilename(destPath)}
-              media-type="application/xhtml+xml"
-            />
-            ,
-            <item
-              id={`image-${i + 1}`}
-              href={destPath}
-              media-type={mimetype}
-            />
-          ]).toArray()
+          images.entries()
+            .flatMap(([i, img]) => [
+              <item
+                id={`page-${i + 1}`}
+                href={imageFilenameToXhtmlFilename(img.destPath)}
+                media-type="application/xhtml+xml"
+              />
+              ,
+              ...(img.isTextOnlyPage()
+                ? []
+                : [
+                  <item
+                    id={`image-${i + 1}`}
+                    href={img.destPath}
+                    media-type={img.mimetype}
+                  />
+                ])
+            ])
+            .toArray()
         }</>
       </manifest>
 
@@ -309,7 +325,9 @@ const makePageXhtml = (
       </head>
       <body>
         {
-          image.mimetype.startsWith("video/") ? (
+          image.mimetype === undefined ? (
+            null
+          ) : image.mimetype.startsWith("video/") ? (
             <video controls="controls">
               <source src={imgSrc} type={image.mimetype} />
               Your reader doesn't support playing this video.
@@ -399,20 +417,22 @@ export async function makeEpub(
       ),
     );
 
-    // add image
-    let options: zip.ZipWriterAddDataOptions = ZIP_OPTIONS;
-    const timestamp = await imageSource.getTimestamp?.();
-    if (timestamp != null) {
-      options = { ...options, lastModDate: timestamp };
+    if (!imageInfo.isTextOnlyPage()) {
+      // add image
+      let options: zip.ZipWriterAddDataOptions = ZIP_OPTIONS;
+      const timestamp = await imageSource.getTimestamp?.();
+      if (timestamp != null) {
+        options = { ...options, lastModDate: timestamp };
+      }
+      const imgReader = await imageSource.readImage();
+      await zipWriter.add(
+        `OEBPS/${imageInfo.destPath}`,
+        "getReader" in imgReader
+          ? imgReader
+          : new zip.Uint8ArrayReader(imgReader),
+        options,
+      );
     }
-    const imgReader = await imageSource.readImage();
-    await zipWriter.add(
-      `OEBPS/${imageInfo.destPath}`,
-      "getReader" in imgReader
-        ? imgReader
-        : new zip.Uint8ArrayReader(imgReader),
-      options,
-    );
   }
 
   await zipWriter.close();
